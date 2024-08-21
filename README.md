@@ -1,7 +1,7 @@
 # ton-amm-dex
 FunC decentralised exchange (DEX) for the The Open Network (TON)
 
-
+Fork of [Ston FI](https://github.com/ston-fi/dex-core) at hash [6ab5b1c](https://github.com/ston-fi/dex-core/commit/6ab5b1cb3ddb6a37a070f980bae84acbb0197814), ported into the [Blueprint SDK](https://github.com/ton-org/blueprint) structure.
 
 ## Project structure
 
