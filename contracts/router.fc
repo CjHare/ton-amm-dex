@@ -1,6 +1,7 @@
 #pragma version >=0.2.0;
 
-#include "common/stdlib.fc";
+#include "imports/stdlib.fc";
+#include "common/extStdlib.fc";
 #include "common/gas.fc";
 #include "common/jetton-utils.fc";
 #include "common/messages.fc";
