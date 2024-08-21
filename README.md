@@ -27,3 +27,11 @@ Fork of [Ston FI](https://github.com/ston-fi/dex-core) at hash [6ab5b1c](https:/
 ### Add a new contract
 
 `npx blueprint create ContractName` or `yarn blueprint create ContractName`
+
+
+## Web2 references
+Web2 URI references existing within the FunC code
+
+```bash
+grep -r "ston.fi" --include="*.fc" .
+```
