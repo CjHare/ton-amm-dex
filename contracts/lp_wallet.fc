@@ -1,6 +1,7 @@
 #pragma version >=0.2.0;
 
-#include "common/stdlib.fc";
+#include "imports/stdlib.fc";
+#include "common/extStdlib.fc";
 #include "lp_wallet/op.fc";
 #include "lp_wallet/params.fc";
 #include "lp_wallet/errors.fc";
