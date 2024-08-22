@@ -153,20 +153,12 @@ describe('Pool', () => {
 
         const userAddres =randomAddress("user");
 
-        //TODO call the actual reset gas function!!!!
-
-        // Supply the other side of the LP pool
         const resetGasResult = await blockchain.sendMessage(
             internal({
                 from: routerAddress,
                 to: pool.address,
-                value: toNano(7000000000),
-                body: pool.provideLiquidity({
-                    fromAddress: userAddres,
-                    jettonAmount0: BigInt(1000001),
-                    jettonAmount1: BigInt(0),
-                    minLPOut: BigInt(1),
-                })
+                value: toNano(70000000),
+                body: pool.resetGas()
             })
         );
 
@@ -180,13 +172,13 @@ describe('Pool', () => {
                 // Reset gas message from user wallet, then creation of user wallet
         expect(resetGasResult.events).toHaveLength(2);    
          expect(resetGasResult.events[0].type).toBe('message_sent')
-         expect(resetGasResult.events[1].type).toBe('account_created')
-         const eventCreateSendToken0 =resetGasResult.events[1] as EventAccountCreated
-         const userAccountToken0 = eventCreateSendToken0.account
-         expect(userAccountToken0.equals(userAccountToken0)).toBeTruthy
-         const eventMsgSendToken0 =  resetGasResult.events[0] as EventMessageSent
-         expect(eventMsgSendToken0.from.equals(userAddres)).toBeTruthy
-         expect(eventMsgSendToken0.to.equals(pool.address)).toBeTruthy
+         expect(resetGasResult.events[1].type).toBe('message_sent')
+         const eventMsgSendToken0 =resetGasResult.events[1] as EventMessageSent
+         expect(eventMsgSendToken0.from.equals(pool.address)).toBeTruthy
+         expect(eventMsgSendToken0.to.equals(routerAddress)).toBeTruthy
+         const eventMsgSendToken1 =  resetGasResult.events[0] as EventMessageSent
+         expect(eventMsgSendToken1.from.equals(userAddres)).toBeTruthy
+         expect(eventMsgSendToken1.to.equals(pool.address)).toBeTruthy
   });
 
   
@@ -282,7 +274,6 @@ describe('Pool', () => {
     const burnMsg = burnTokensResult.events[1] as EventMessageSent
     expect(burnMsg.from.equals(pool.address))
     expect(burnMsg.to.equals(routerAddress))
-
 
     // Check the balances after the burning
     const callPoolData = await blockchain.runGetMethod(pool.address,"get_pool_data", []);
