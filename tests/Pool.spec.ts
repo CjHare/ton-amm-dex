@@ -1,8 +1,8 @@
 import { Blockchain, EventAccountCreated, EventMessageSent, SandboxContract, TreasuryContract, internal } from '@ton/sandbox';
-import { Address, Cell, toNano } from '@ton/core';
+import { Address, Cell, TupleItemSlice, beginCell, toNano } from '@ton/core';
 import { Pool } from '../wrappers/Pool';
 import { compile } from '@ton/blueprint';
-import { randomAddress } from './lib/helpers';
+import { getBlockchainPresetConfig, randomAddress } from './lib/helpers';
 
 /** Import the TON matchers */
 import "@ton/test-utils";
@@ -47,6 +47,10 @@ describe('Pool', () => {
 
         deployer = await blockchain.treasury('deployer');
 
+        deployPool();
+    });
+
+    async function deployPool():Promise<void>{
         const deployResult = await pool.sendDeploy(deployer.getSender(), toNano('0.05'));
 
         expect(deployResult.transactions).toHaveTransaction({
@@ -64,8 +68,7 @@ describe('Pool', () => {
         const eventCreateSendToken0 = deployResult.events[1] as EventAccountCreated
         expect(eventMsgSendToken0.from.equals(deployer.address)).toBeTruthy
         expect(eventMsgSendToken0.to.equals(pool.address)).toBeTruthy        
-    });
-
+    }
 
     it('should deploy', async () => {
         expect(blockchain).toBeDefined;
@@ -141,9 +144,6 @@ describe('Pool', () => {
 
       });
 
-
-
-
   it("should reset gas", async () => {
         // Set balance of pool contract to 5 TON
         await deployer.send({
@@ -152,6 +152,8 @@ describe('Pool', () => {
         });  
 
         const userAddres =randomAddress("user");
+
+        //TODO call the actual reset gas function!!!!
 
         // Supply the other side of the LP pool
         const resetGasResult = await blockchain.sendMessage(
@@ -175,15 +177,120 @@ describe('Pool', () => {
             success: true,
         });
 
-        // Reset gas message from user wallet, then creation of user wallet
+                // Reset gas message from user wallet, then creation of user wallet
         expect(resetGasResult.events).toHaveLength(2);    
          expect(resetGasResult.events[0].type).toBe('message_sent')
          expect(resetGasResult.events[1].type).toBe('account_created')
          const eventCreateSendToken0 =resetGasResult.events[1] as EventAccountCreated
          const userAccountToken0 = eventCreateSendToken0.account
+         expect(userAccountToken0.equals(userAccountToken0)).toBeTruthy
          const eventMsgSendToken0 =  resetGasResult.events[0] as EventMessageSent
          expect(eventMsgSendToken0.from.equals(userAddres)).toBeTruthy
          expect(eventMsgSendToken0.to.equals(pool.address)).toBeTruthy
   });
+
+  
+  it("should allow burning", async () => {
+        // Set balance of pool contract to 5 TON
+        await deployer.send({
+            to: pool.address,
+            value: toNano(5), 
+        });  
+
+        // Change the chain state
+    blockchain.setConfig(getBlockchainPresetConfig());
+
+    // Deploy a pool with different parameters
+    pool = blockchain.openContract(Pool.createFromConfig({        
+        routerAddress: routerAddress,
+        lpFee: BigInt(20),
+        protocolFee: BigInt(0),
+        refFee: BigInt(10),
+        protocolFeesAddress: randomAddress("a valid protocol fee address"),
+        collectedTokenAProtocolFees: BigInt(0),
+        collectedTokenBProtocolFees: BigInt(0),
+        wallet0: randomAddress("wallet0"),
+        wallet1: randomAddress("wallet1"),
+        reserve0: BigInt(10000),
+        reserve1: BigInt(204030300),
+        supplyLP: BigInt(1000),
+        LPWalletCode: walletCode,
+        LPAccountCode: accountCode
+    }, poolCode));
+
+    await deployPool();
+
+    const userAddress = beginCell().storeAddress(randomAddress("user1")).endCell();
+    const callWalletAddress = await blockchain.runGetMethod(pool.address,"get_wallet_address", [{ type: "slice", cell: Cell.fromBase64(userAddress.toBoc({ idx: false }).toString("base64")) }]);
+    expect(callWalletAddress.exitCode).toBe(0);
+    const userWalletAddress = (callWalletAddress.stack[0] as TupleItemSlice).cell?.beginParse().loadAddress();
+    expect(userWalletAddress).toBeDefined
+
+    // Internal message with incorrect parameter to burn tokens (expected to fail)
+    const sendWrongAmount = await blockchain.sendMessage(
+        internal({
+            from: userWalletAddress,
+            to: pool.address,
+            value: toNano(70000000),
+            body: pool.burnTokensNotification({
+                fromAddress: randomAddress("user1"),
+                jettonAmount: BigInt(0),
+                responseAddress: null,
+            })
+        })
+    );
+
+    // The tx should failed and the only event should be the failed tx
+    expect(sendWrongAmount.transactions).toHaveTransaction({
+        from: userWalletAddress,
+        to: pool.address,
+        deploy: false,
+        success: false,
+    });
+    expect(sendWrongAmount.events).toHaveLength(1);    
+    expect(sendWrongAmount.events[0].type).toBe('message_sent')
+
+    // Internal message to burn tokens
+    const burnTokensResult = await blockchain.sendMessage(
+        internal({
+            from: userWalletAddress,
+            to: pool.address,
+            value: toNano(1),
+            body: pool.burnTokensNotification({
+                fromAddress: randomAddress("user1"),
+                jettonAmount: BigInt(100),
+                responseAddress: userWalletAddress,
+            })
+        })
+    );
+
+    expect(burnTokensResult.transactions).toHaveTransaction({
+        from: userWalletAddress,
+        to: pool.address,
+        deploy: false,
+        success: true
+    });
+
+    expect(burnTokensResult.events.length).toBe(2)
+    
+    expect(burnTokensResult.events[0].type).toBe('message_sent')
+    const initiationMsg = burnTokensResult.events[0] as EventMessageSent
+    expect(initiationMsg.from.equals(pool.address))
+    expect(initiationMsg.to.equals(userWalletAddress))
+
+    expect(burnTokensResult.events[1].type).toBe('message_sent')
+    const burnMsg = burnTokensResult.events[1] as EventMessageSent
+    expect(burnMsg.from.equals(pool.address))
+    expect(burnMsg.to.equals(routerAddress))
+
+
+    // Check the balances after the burning
+    const callPoolData = await blockchain.runGetMethod(pool.address,"get_pool_data", []);
+    const reserve0  = callPoolData.stackReader.readBigNumber()
+    expect( reserve0 < BigInt(10000)).toBe(true);
+    const reserve1  = callPoolData.stackReader.readBigNumber()
+    expect( reserve1 < BigInt(204030300)).toBe(true);
+  });
+
 
 });
