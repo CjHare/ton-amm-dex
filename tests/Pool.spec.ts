@@ -2,7 +2,7 @@ import { Blockchain, EventAccountCreated, EventMessageSent, SandboxContract, Tre
 import { Address, Cell, TupleItemSlice, beginCell, toNano } from '@ton/core';
 import { Pool } from '../wrappers/Pool';
 import { compile } from '@ton/blueprint';
-import { getBlockchainPresetConfig, randomAddress } from './lib/helpers';
+import { getBlockchainPresetConfig, randomAddress, zeroAddress } from './lib/helpers';
 
 /** Import the TON matchers */
 import "@ton/test-utils";
@@ -189,6 +189,8 @@ describe('Pool', () => {
             value: toNano(5), 
         });  
 
+// TODO setup the Jettison contracts and state in the sandbox, loading and setting the Blockchain config takes a serious amount of time!
+
         // Change the chain state
     blockchain.setConfig(getBlockchainPresetConfig());
 
@@ -283,5 +285,188 @@ describe('Pool', () => {
     expect( reserve1 < BigInt(204030300)).toBe(true);
   });
 
+
+  it("should allow collecting fees", async () => {
+        // Set balance of pool contract to 5 TON
+        await deployer.send({
+            to: pool.address,
+            value: toNano(5), 
+        });  
+
+// TODO setup the Jettison contracts and state in the sandbox, loading and setting the Blockchain config takes a serious amount of time!
+
+        // Change the chain state
+    blockchain.setConfig(getBlockchainPresetConfig());
+
+        // Deploy a pool with different parameters, fees and an invalid address
+        pool = blockchain.openContract(Pool.createFromConfig({        
+            routerAddress: routerAddress,
+            lpFee: BigInt(20),
+            protocolFee: BigInt(0),
+            refFee: BigInt(10),
+            protocolFeesAddress: zeroAddress,
+            collectedTokenAProtocolFees: BigInt(110),
+            collectedTokenBProtocolFees: BigInt(440),
+            wallet0: randomAddress("wallet0"),
+            wallet1: randomAddress("wallet1"),
+            reserve0: BigInt(1310),
+            reserve1: BigInt(203333),
+            supplyLP: BigInt(10000000),
+            LPWalletCode: walletCode,
+            LPAccountCode: accountCode
+        }, poolCode));
+    
+        await deployPool();
+
+
+    // Internal message to collect fees that fails to collect fee
+    const sendCollectFeesNoFeeAddress = await blockchain.sendMessage(
+        internal({
+            from: routerAddress,
+            to: pool.address,
+            value: toNano(0.5),
+            body: pool.collectFees()
+            })
+    );
+
+    expect(sendCollectFeesNoFeeAddress.transactions).toHaveTransaction({
+        from: routerAddress,
+        to: pool.address,
+        deploy: false,
+        success: false
+    });
+
+
+        // Deploy a pool with different parameters, fees with valid addres
+        pool = blockchain.openContract(Pool.createFromConfig({        
+            routerAddress: routerAddress,
+            lpFee: BigInt(20),
+            protocolFee: BigInt(0),
+            refFee: BigInt(10),
+            protocolFeesAddress: randomAddress("a valid protocol fee address"),
+            collectedTokenAProtocolFees: BigInt(110),
+            collectedTokenBProtocolFees: BigInt(440),
+            wallet0: randomAddress("wallet0"),
+            wallet1: randomAddress("wallet1"),
+            reserve0: BigInt(1310),
+            reserve1: BigInt(203333),
+            supplyLP: BigInt(10000000),
+            LPWalletCode: walletCode,
+            LPAccountCode: accountCode
+        }, poolCode));
+    
+        await deployPool();
+
+            // Internal message to collect fees that collects the fee
+            const sendCollectFees = await blockchain.sendMessage(
+                internal({
+                    from: routerAddress,
+                    to: pool.address,
+                    value: toNano(0.5),
+                    body: pool.collectFees()
+                    })
+            );
+        
+            expect(sendCollectFees.transactions).toHaveTransaction({
+                from: routerAddress,
+                to: pool.address,
+                deploy: false,
+                success: true
+            });
+
+            expect(sendCollectFees.events.length).toBe(1)
+            expect(sendCollectFees.events[0].type).toBe('message_sent')
+            const initiationMsg = sendCollectFees.events[0] as EventMessageSent
+            expect(initiationMsg.from.equals(pool.address))
+            expect(initiationMsg.to.equals(pool.address))
+
+            // Get Pool data request from wallet0
+//             const sendGetPoolData = await blockchain.sendMessage(
+//                 internal({
+//                     from: randomAddress("wallet0"),
+//                     to: pool.address,
+//                     value: toNano(0.5),
+//                     body: pool.getPoolData
+//                     })
+//             );
+
+//     expect(sendGetPoolData.events.length).toBe(2)
+    
+//     expect(sendGetPoolData.events[0].type).toBe('message_sent')
+//     const sendGetPoolDataMsg = sendGetPoolData.events[0] as EventMessageSent
+//     expect(sendGetPoolDataMsg.from.equals(pool.address))
+//     expect(sendGetPoolDataMsg.to.equals(randomAddress("wallet0")))
+
+// const a = sendGetPoolData.events
+
+//     let msgOutBody = sendGetPoolDataMsg.body.beginParse()
+//     msgOutBody.skip(4 + 4 + 4);
+//     msgOutBody.loadAddress();
+//     expect(msgOutBody.loadCoins()).toEqual(0n);
+
+
+
+        // Deploy a pool with different parameters, big fees with valid addres
+
+    pool = blockchain.openContract(Pool.createFromConfig({        
+        routerAddress: routerAddress,
+        lpFee: BigInt(20),
+        protocolFee: BigInt(0),
+        refFee: BigInt(10),
+        protocolFeesAddress: randomAddress("a valid protocol fee address"),
+        collectedTokenAProtocolFees: BigInt(11000000000000),
+        collectedTokenBProtocolFees: BigInt(4400000000000000),
+        wallet0: randomAddress("wallet0"),
+        wallet1: randomAddress("wallet1"),
+        reserve0: BigInt(1310),
+        reserve1: BigInt(203333),
+        supplyLP: BigInt(10000000),
+        LPWalletCode: walletCode,
+        LPAccountCode: accountCode
+    }, poolCode));
+
+    await deployPool();
+
+    // Too low Gas should fail
+    const userAddress = randomAddress("user")
+    const sendCollectFeesLowGas = await blockchain.sendMessage(
+        internal({
+            from: userAddress,
+            to: pool.address,
+            value: toNano(0.5),
+            body: pool.collectFees()
+            })
+    );
+
+    expect(sendCollectFeesLowGas.transactions).toHaveTransaction({
+        from: userAddress,
+        to: pool.address,
+        deploy: false,
+        success: false
+    });
+
+        // Adequate Gas should pass
+        const sendCollectFeesWithRewards = await blockchain.sendMessage(
+            internal({
+                from: userAddress,
+                to: pool.address,
+                value: toNano(1.2),
+                body: pool.collectFees()
+                })
+        );
+    
+        expect(sendCollectFeesWithRewards.transactions).toHaveTransaction({
+            from: userAddress,
+            to: pool.address,
+            deploy: false,
+            success: true
+        });
+
+
+        expect(sendCollectFeesWithRewards.events.length).toBe(2)
+
+        //TODO check the balances for available fees
+        //TODO check "a valid protocol fee address" received the fees
+  });
 
 });
