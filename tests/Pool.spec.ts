@@ -377,8 +377,19 @@ describe('Pool', () => {
             expect(sendCollectFees.events.length).toBe(1)
             expect(sendCollectFees.events[0].type).toBe('message_sent')
             const initiationMsg = sendCollectFees.events[0] as EventMessageSent
-            expect(initiationMsg.from.equals(pool.address))
-            expect(initiationMsg.to.equals(pool.address))
+            expect(initiationMsg.from).toEqualAddress(pool.address)
+            expect(initiationMsg.to).toEqualAddress(routerAddress)
+
+            // Should be collecting fees of 440 TokenB 
+            let sendSwapRefs = initiationMsg.body.refs[0].beginParse()
+            sendSwapRefs.skip(4 + 4 + 4);
+            sendSwapRefs.loadAddress();
+            expect(sendSwapRefs.loadCoins()).toBe(BigInt(440));
+
+            // Zero Fees should now remain
+            const callPoolData = await blockchain.runGetMethod(pool.address,"get_pool_data", []);
+            expect(        (callPoolData.stack[8] as TupleItemInt).value).toBe(BigInt(0))
+            expect(        (callPoolData.stack[9] as TupleItemInt).value).toBe(BigInt(0))
 
         // Deploy a pool with different parameters, big fees with valid addres
     pool = blockchain.openContract(Pool.createFromConfig({        
@@ -556,11 +567,11 @@ const callGetOutputs = await blockchain.runGetMethod( pool.address,"get_expected
 
     expect(sendSwap.events.length).toBe(1)
     expect(sendSwap.events[0].type).toBe('message_sent')
-    const senSwaptMsg = sendSwap.events[0] as EventMessageSent
-    expect(senSwaptMsg.from.equals(pool.address))
-    expect(senSwaptMsg.to.equals(routerAddress))
+    const sensSwaptMsg = sendSwap.events[0] as EventMessageSent
+    expect(sensSwaptMsg.from.equals(pool.address))
+    expect(sensSwaptMsg.to.equals(routerAddress))
 
-    let sendSwapRefs = senSwaptMsg.body.refs[0].beginParse()
+    let sendSwapRefs = sensSwaptMsg.body.refs[0].beginParse()
     sendSwapRefs.loadCoins();
     sendSwapRefs.loadAddress();
     let receivedToken = sendSwapRefs.loadCoins();
