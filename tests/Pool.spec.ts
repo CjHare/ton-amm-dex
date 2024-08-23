@@ -1,5 +1,5 @@
-import { Blockchain, EventAccountCreated, EventMessageSent, SandboxContract, TreasuryContract, internal } from '@ton/sandbox';
-import { Address, Cell, TupleItemSlice, beginCell, toNano } from '@ton/core';
+import { Blockchain, EventAccountCreated, EventMessageSent, SandboxContract, TreasuryContract, internal, printTransactionFees } from '@ton/sandbox';
+import { Address, Cell, TupleItemInt, TupleItemSlice, beginCell, toNano } from '@ton/core';
 import { Pool } from '../wrappers/Pool';
 import { compile } from '@ton/blueprint';
 import { getBlockchainPresetConfig, randomAddress, zeroAddress } from './lib/helpers';
@@ -380,34 +380,7 @@ describe('Pool', () => {
             expect(initiationMsg.from.equals(pool.address))
             expect(initiationMsg.to.equals(pool.address))
 
-            // Get Pool data request from wallet0
-//             const sendGetPoolData = await blockchain.sendMessage(
-//                 internal({
-//                     from: randomAddress("wallet0"),
-//                     to: pool.address,
-//                     value: toNano(0.5),
-//                     body: pool.getPoolData
-//                     })
-//             );
-
-//     expect(sendGetPoolData.events.length).toBe(2)
-    
-//     expect(sendGetPoolData.events[0].type).toBe('message_sent')
-//     const sendGetPoolDataMsg = sendGetPoolData.events[0] as EventMessageSent
-//     expect(sendGetPoolDataMsg.from.equals(pool.address))
-//     expect(sendGetPoolDataMsg.to.equals(randomAddress("wallet0")))
-
-// const a = sendGetPoolData.events
-
-//     let msgOutBody = sendGetPoolDataMsg.body.beginParse()
-//     msgOutBody.skip(4 + 4 + 4);
-//     msgOutBody.loadAddress();
-//     expect(msgOutBody.loadCoins()).toEqual(0n);
-
-
-
         // Deploy a pool with different parameters, big fees with valid addres
-
     pool = blockchain.openContract(Pool.createFromConfig({        
         routerAddress: routerAddress,
         lpFee: BigInt(20),
@@ -467,6 +440,142 @@ describe('Pool', () => {
 
         //TODO check the balances for available fees
         //TODO check "a valid protocol fee address" received the fees
+  });
+
+
+  it("should allow swapping", async () => {
+    let protocolFeesAddress = randomAddress("another valid protocol address");
+    
+        // Set balance of pool contract to 5 TON
+        await deployer.send({
+            to: pool.address,
+            value: toNano(5), 
+        });  
+
+        // Deploy a pool with different parameters: big zero fees, valid addres, 1:1 asset balance
+        pool = blockchain.openContract(Pool.createFromConfig({        
+            routerAddress: routerAddress,
+            lpFee: BigInt(20),
+            protocolFee: BigInt(0),
+            refFee: BigInt(10),
+            protocolFeesAddress: randomAddress("a valid protocol fee address"),
+            collectedTokenAProtocolFees: BigInt(0),
+            collectedTokenBProtocolFees: BigInt(0),
+            wallet0: randomAddress("wallet0"),
+            wallet1: randomAddress("wallet1"),
+            reserve0: BigInt(1000000000000000),
+            reserve1: BigInt(1000000000000000),
+            supplyLP: BigInt(10000000),
+            LPWalletCode: walletCode,
+            LPAccountCode: accountCode
+        }, poolCode));
+
+        await deployPool();
+
+        const sendChangeFees = await blockchain.sendMessage(
+            internal({
+                from: routerAddress,
+                to: pool.address,
+                value: toNano(0.1),
+                body: pool.setFees({
+                    newLPFee: BigInt(100),
+                    newProtocolFees: BigInt(0),
+                    newRefFee: BigInt(10),
+                    newProtocolFeeAddress: protocolFeesAddress,
+                  }),
+                })
+        );
+    
+//TODO remove the implicit deploy:false in these expect statements
+
+        expect(sendChangeFees.transactions).toHaveTransaction({
+            from: routerAddress,
+            to: pool.address,
+            success: true
+        });
+
+        const callPoolData = await blockchain.runGetMethod(pool.address,"get_pool_data", []);
+expect(        (callPoolData.stack[4] as TupleItemInt).value).toBe(BigInt(100))
+expect(        (callPoolData.stack[5] as TupleItemInt).value).toBe(BigInt(0))
+expect(        (callPoolData.stack[6] as TupleItemInt).value).toBe(BigInt(10))
+        
+const callGetOutputs = await blockchain.runGetMethod( pool.address,"get_expected_outputs", [
+      { type: "int", value: BigInt(20000000000) },
+      { type: "slice", cell: beginCell().storeAddress(randomAddress("wallet0")).endCell()}
+    ]);
+
+    const expectedSwapWallet0  = (callGetOutputs.stack[0] as TupleItemInt).value;
+    expect(expectedSwapWallet0).toBe(BigInt(19799607967));
+
+    // Invalid sender (unpermisioned) should fail
+    const sendSwapWrongSender = await blockchain.sendMessage(
+        internal({
+            from: randomAddress(""),
+            to: pool.address,
+            value: toNano(0.1),
+            body: pool.swap({
+                fromAddress: randomAddress("user1"),
+                jettonAmount: BigInt(20000000000),
+                tokenWallet: randomAddress("wallet1"),
+                toAddress: randomAddress("user1"),
+                minOutput: BigInt(200),
+              }),
+            })
+    );
+
+    expect(sendSwapWrongSender.transactions).toHaveTransaction({
+        from: randomAddress(""),
+        to: pool.address,
+        deploy: false,
+        success: false
+    });
+
+
+    // Permissioned sender should be able to swap
+    const sendSwap = await blockchain.sendMessage(
+        internal({
+            from: routerAddress,
+            to: pool.address,
+            value: toNano(0.1),
+            body: pool.swap({
+                fromAddress: randomAddress("user1"),
+                jettonAmount: BigInt(20000000000),
+                tokenWallet: randomAddress("wallet1"),
+                toAddress: randomAddress("user1"),
+                minOutput: BigInt(200),
+              }),
+            })
+    );
+
+    expect(sendSwap.transactions).toHaveTransaction({
+        from: routerAddress,
+        to: pool.address,
+        deploy: false,
+        success: true
+    });
+
+    expect(sendSwap.events.length).toBe(1)
+    expect(sendSwap.events[0].type).toBe('message_sent')
+    const senSwaptMsg = sendSwap.events[0] as EventMessageSent
+    expect(senSwaptMsg.from.equals(pool.address))
+    expect(senSwaptMsg.to.equals(routerAddress))
+
+    //TODO fix this, we're after the amount swapped, the data either isn't in the EventMessageSent or is serialized in an inexpected format
+    // let msgOutSwapBody = senSwaptMsg.body.beginParse();
+    // msgOutSwapBody.loadCoins();
+    // msgOutSwapBody.loadAddress();
+    // let receivedToken = msgOutSwapBody.loadCoins();
+    // expect(receivedToken).toBe(expectedSwapWallet0);
+
+
+    // // After performing a swap, the expected output for the same swap should be lower
+    // const expectedOutputsAfterSwap = await blockchain.runGetMethod(pool.address,"get_expected_outputs", [
+    //     { type: "int", value: BigInt(20000000000) },
+    //     { type: "slice", cell: beginCell().storeAddress(randomAddress("wallet0")).endCell()},
+    //   ]);
+
+    //   const expectedWallet0AfterSwap  = (expectedOutputsAfterSwap.stack[0] as TupleItemInt).value;
+    //   expect(expectedWallet0AfterSwap).toBeLessThan(receivedToken);
   });
 
 });
