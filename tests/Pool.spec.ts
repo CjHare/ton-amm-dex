@@ -101,7 +101,6 @@ describe('Pool', () => {
         expect(sendToken0.transactions).toHaveTransaction({
             from: routerAddress,
             to: pool.address,
-            deploy: false,
             success: true,
         });
 
@@ -132,7 +131,6 @@ describe('Pool', () => {
         expect(sendToken1.transactions).toHaveTransaction({
             from: routerAddress,
             to: pool.address,
-            deploy: false,
             success: true,
         });
 
@@ -238,7 +236,6 @@ describe('Pool', () => {
     expect(sendWrongAmount.transactions).toHaveTransaction({
         from: userWalletAddress,
         to: pool.address,
-        deploy: false,
         success: false,
     });
     expect(sendWrongAmount.events).toHaveLength(1);    
@@ -261,7 +258,6 @@ describe('Pool', () => {
     expect(burnTokensResult.transactions).toHaveTransaction({
         from: userWalletAddress,
         to: pool.address,
-        deploy: false,
         success: true
     });
 
@@ -332,7 +328,6 @@ describe('Pool', () => {
     expect(sendCollectFeesNoFeeAddress.transactions).toHaveTransaction({
         from: routerAddress,
         to: pool.address,
-        deploy: false,
         success: false
     });
 
@@ -425,7 +420,6 @@ describe('Pool', () => {
     expect(sendCollectFeesLowGas.transactions).toHaveTransaction({
         from: userAddress,
         to: pool.address,
-        deploy: false,
         success: false
     });
 
@@ -442,7 +436,6 @@ describe('Pool', () => {
         expect(sendCollectFeesWithRewards.transactions).toHaveTransaction({
             from: userAddress,
             to: pool.address,
-            deploy: false,
             success: true
         });
 
@@ -537,7 +530,6 @@ const callGetOutputs = await blockchain.runGetMethod( pool.address,"get_expected
     expect(sendSwapWrongSender.transactions).toHaveTransaction({
         from: randomAddress(""),
         to: pool.address,
-        deploy: false,
         success: false
     });
 
@@ -561,7 +553,6 @@ const callGetOutputs = await blockchain.runGetMethod( pool.address,"get_expected
     expect(sendSwap.transactions).toHaveTransaction({
         from: routerAddress,
         to: pool.address,
-        deploy: false,
         success: true
     });
 
