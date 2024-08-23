@@ -495,9 +495,9 @@ describe('Pool', () => {
         });
 
         const callPoolData = await blockchain.runGetMethod(pool.address,"get_pool_data", []);
-expect(        (callPoolData.stack[4] as TupleItemInt).value).toBe(BigInt(100))
-expect(        (callPoolData.stack[5] as TupleItemInt).value).toBe(BigInt(0))
-expect(        (callPoolData.stack[6] as TupleItemInt).value).toBe(BigInt(10))
+        expect(        (callPoolData.stack[4] as TupleItemInt).value).toBe(BigInt(100))
+        expect(        (callPoolData.stack[5] as TupleItemInt).value).toBe(BigInt(0))
+        expect(        (callPoolData.stack[6] as TupleItemInt).value).toBe(BigInt(10))
         
 const callGetOutputs = await blockchain.runGetMethod( pool.address,"get_expected_outputs", [
       { type: "int", value: BigInt(20000000000) },
@@ -540,7 +540,7 @@ const callGetOutputs = await blockchain.runGetMethod( pool.address,"get_expected
             body: pool.swap({
                 fromAddress: randomAddress("user1"),
                 jettonAmount: BigInt(20000000000),
-                tokenWallet: randomAddress("wallet1"),
+                tokenWallet: randomAddress("wallet0"),
                 toAddress: randomAddress("user1"),
                 minOutput: BigInt(200),
               }),
@@ -560,22 +560,21 @@ const callGetOutputs = await blockchain.runGetMethod( pool.address,"get_expected
     expect(senSwaptMsg.from.equals(pool.address))
     expect(senSwaptMsg.to.equals(routerAddress))
 
-    //TODO fix this, we're after the amount swapped, the data either isn't in the EventMessageSent or is serialized in an inexpected format
-    // let msgOutSwapBody = senSwaptMsg.body.beginParse();
-    // msgOutSwapBody.loadCoins();
-    // msgOutSwapBody.loadAddress();
-    // let receivedToken = msgOutSwapBody.loadCoins();
-    // expect(receivedToken).toBe(expectedSwapWallet0);
+    let sendSwapRefs = senSwaptMsg.body.refs[0].beginParse()
+    sendSwapRefs.loadCoins();
+    sendSwapRefs.loadAddress();
+    let receivedToken = sendSwapRefs.loadCoins();
+    expect(receivedToken).toBe(expectedSwapWallet0);
 
 
-    // // After performing a swap, the expected output for the same swap should be lower
-    // const expectedOutputsAfterSwap = await blockchain.runGetMethod(pool.address,"get_expected_outputs", [
-    //     { type: "int", value: BigInt(20000000000) },
-    //     { type: "slice", cell: beginCell().storeAddress(randomAddress("wallet0")).endCell()},
-    //   ]);
+    // After performing a swap, the expected output for the same swap should be lower
+    const expectedOutputsAfterSwap = await blockchain.runGetMethod(pool.address,"get_expected_outputs", [
+        { type: "int", value: BigInt(20000000000) },
+        { type: "slice", cell: beginCell().storeAddress(randomAddress("wallet0")).endCell()},
+      ]);
 
-    //   const expectedWallet0AfterSwap  = (expectedOutputsAfterSwap.stack[0] as TupleItemInt).value;
-    //   expect(expectedWallet0AfterSwap).toBeLessThan(receivedToken);
+      const expectedWallet0AfterSwap  = (expectedOutputsAfterSwap.stack[0] as TupleItemInt).value;
+      expect(expectedWallet0AfterSwap).toBeLessThan(receivedToken);
   });
 
 });
