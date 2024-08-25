@@ -77,7 +77,6 @@ describe('Pool', () => {
     });
 
     it("should mint lp tokens", async () => {
-        // Set balance of pool contract to 5 TON
         await deployer.send({
             to: pool.address,
             value: toNano(5), 
@@ -143,7 +142,6 @@ describe('Pool', () => {
       });
 
   it("should reset gas", async () => {
-        // Set balance of pool contract to 5 TON
         await deployer.send({
             to: pool.address,
             value: toNano(5), 
@@ -151,6 +149,7 @@ describe('Pool', () => {
 
         const userAddres =randomAddress("user");
 
+        // Reset the gas
         const resetGasResult = await blockchain.sendMessage(
             internal({
                 from: routerAddress,
@@ -163,7 +162,6 @@ describe('Pool', () => {
         expect(resetGasResult.transactions).toHaveTransaction({
             from: routerAddress,
             to: pool.address,
-            deploy: false,
             success: true,
         });
 
@@ -181,7 +179,6 @@ describe('Pool', () => {
 
   
   it("should allow burning", async () => {
-        // Set balance of pool contract to 5 TON
         await deployer.send({
             to: pool.address,
             value: toNano(5), 
@@ -283,7 +280,6 @@ describe('Pool', () => {
 
 
   it("should allow collecting fees", async () => {
-        // Set balance of pool contract to 5 TON
         await deployer.send({
             to: pool.address,
             value: toNano(5), 
@@ -450,7 +446,6 @@ describe('Pool', () => {
   it("should allow swapping", async () => {
     let protocolFeesAddress = randomAddress("another valid protocol address");
     
-        // Set balance of pool contract to 5 TON
         await deployer.send({
             to: pool.address,
             value: toNano(5), 
@@ -488,9 +483,7 @@ describe('Pool', () => {
                     newProtocolFeeAddress: protocolFeesAddress,
                   }),
                 })
-        );
-    
-//TODO remove the implicit deploy:false in these expect statements
+        )
 
         expect(sendChangeFees.transactions).toHaveTransaction({
             from: routerAddress,
@@ -579,4 +572,139 @@ const callGetOutputs = await blockchain.runGetMethod( pool.address,"get_expected
       expect(expectedWallet0AfterSwap).toBeLessThan(receivedToken);
   });
 
+  it("should send back token when reject swap", async () => {
+    
+    await deployer.send({
+        to: pool.address,
+        value: toNano(5), 
+    });  
+
+        // Deploy a pool with different parameters: big zero fees, valid addres, 1:1 asset balance
+        const walletZero = randomAddress("wallet0")
+        const walletOne = randomAddress("wallet1")
+        pool = blockchain.openContract(Pool.createFromConfig({        
+            routerAddress: routerAddress,
+            lpFee: BigInt(20),
+            protocolFee: BigInt(0),
+            refFee: BigInt(10),
+            protocolFeesAddress: randomAddress("a valid protocol fee address"),
+            collectedTokenAProtocolFees: BigInt(0),
+            collectedTokenBProtocolFees: BigInt(0),
+            wallet0: walletZero,
+            wallet1: walletOne,
+            reserve0: BigInt(1000),
+            reserve1: BigInt(10000),
+            supplyLP: BigInt(0),
+            LPWalletCode: walletCode,
+            LPAccountCode: accountCode
+        }, poolCode));
+
+        await deployPool();
+
+        // Swap message with unacceptable output expected (should be rejected)
+        const sendSwap = await blockchain.sendMessage(
+            internal({
+                from: routerAddress,
+                to: pool.address,
+                value: toNano(0.1),
+                body: pool.swap({
+                    fromAddress: randomAddress("user1"),
+                    jettonAmount: BigInt(20),
+                    tokenWallet: walletOne,
+                    toAddress: randomAddress("user1"),
+                    minOutput: BigInt(20000000),
+                  }),
+                })
+        );
+
+        
+        expect(sendSwap.transactions).toHaveTransaction({
+            from: routerAddress,
+            to: pool.address,
+            success: true
+        });
+
+        expect(sendSwap.events.length).toBe(1)
+        expect(sendSwap.events[0].type).toBe('message_sent')
+        const swapMsg = sendSwap.events[0] as EventMessageSent
+        expect(swapMsg.from).toEqualAddress(pool.address)
+        expect(swapMsg.to).toEqualAddress(routerAddress)
+
+        let sendSwapRefs = swapMsg.body.refs[0].beginParse()
+    expect(sendSwapRefs.loadCoins()).toBe(0n);
+    expect(sendSwapRefs.loadAddress().equals(walletZero)).toBeTruthy
+    expect(sendSwapRefs.loadCoins()).toBe(20n);
+    expect(sendSwapRefs.loadAddress().equals(walletOne)).toBeTruthy
+
+  });
+
+//   it("should swap with referall", async () => {
+//     setBalance(contract, toNano(5));
+//     setNetworkConfig(contract);
+//     contract.setDataCell(
+//       pool.data({
+//         routerAddress: routerAddress,
+//         lpFee: new BN(20),
+//         protocolFee: new BN(0),
+//         refFee: new BN(10),
+//         protocolFeesAddress: randomAddress("a valid protocol fee address"),
+//         collectedTokenAProtocolFees: new BN(0),
+//         collectedTokenBProtocolFees: new BN(0),
+//         wallet0: randomAddress("wallet0"),
+//         wallet1: randomAddress("wallet1"),
+//         reserve0: new BN("1000000000000000000000000000000000"),
+//         reserve1: new BN("1000000000000000000000000000000000"),
+//         supplyLP: new BN(100000),
+//         LPWalletCode: Cell.fromBoc(fs.readFileSync("build/lp_wallet.cell"))[0],
+//         LPAccountCode: Cell.fromBoc(fs.readFileSync("build/lp_account.cell"))[0],
+//       })
+//     );
+
+//     const sendWithRef = await contract.sendInternalMessage(
+//       internalMessage({
+//         from: routerAddress,
+//         value: toNano(1),
+//         body: pool.swap({
+//           fromAddress: randomAddress("user1"),
+//           jettonAmount: new BN("20000"),
+//           tokenWallet: randomAddress("wallet1"),
+//           minOutput: new BN("0"),
+//           toAddress: randomAddress("user1"),
+//           hasRef: true,
+//           refAddress: randomAddress("ref"),
+//         }),
+//       })
+//     );
+//     expect(sendWithRef.type).to.be.equal("success");
+//     expect(sendWithRef.actionList.length).to.be.equal(2);
+//     expect(sendWithRef.actionList[0].type).to.be.equal("send_msg");
+//     expect(sendWithRef.actionList[1].type).to.be.equal("send_msg");
+
+//     let msgOutUser = (sendWithRef.actionList[1] as SendMsgAction).message;
+//     expect(msgOutUser.info.dest?.toString()).to.be.equal(routerAddress.toString());
+
+//     let tokenOutUser = msgOutUser.body.beginParse().readRef();
+//     expect(tokenOutUser.readCoins()).to.be.a.bignumber.that.is.equal(new BN(19939));
+//     expect(tokenOutUser.readAddress()?.toString()).to.be.equal(randomAddress("wallet0").toString());
+
+//     let msgOutRef = (sendWithRef.actionList[0] as SendMsgAction).message;
+//     expect(msgOutRef.info.dest?.toString()).to.be.equal(routerAddress.toString());
+
+//     let tokenOutRef = msgOutRef.body.beginParse().readRef();
+//     expect(tokenOutRef.readCoins()).to.be.a.bignumber.that.is.equal(new BN(20));
+//     expect(tokenOutRef.readAddress()?.toString()).to.be.equal(randomAddress("wallet0").toString());
+//   });
+
+  /*
+  it("should generate a valid jetton URI", async () => {
+    let anotherAddress = randomAddress("another address");
+    contract.setC7(
+      buildC7({
+        myself: anotherAddress,
+      })
+    );
+    const call2 = await contract.invokeGetMethod("get_jetton_data", []);
+    expect(parseUri(call2.result[3] as Cell)).to.be.equal("https://lp.ston.fi/" + anotherAddress.toString().toUpperCase() + ".json");
+  });
+*/
 });
