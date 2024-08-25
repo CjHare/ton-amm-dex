@@ -12,11 +12,16 @@ describe('Pool', () => {
     let walletCode: Cell;
     let accountCode: Cell;
     let routerAddress: Address;
+    let walletOneAddress: Address;
+    let walletZeroAddress: Address;
 
     beforeAll(async () => {
         poolCode = await compile('Pool');
         walletCode = await compile('Wallet');
         accountCode = await compile('Account');
+        walletZeroAddress = randomAddress("wallet0")
+        walletOneAddress = randomAddress("wallet1")
+    
     });
 
     let blockchain: Blockchain;
@@ -36,8 +41,8 @@ describe('Pool', () => {
             protocolFeesAddress: randomAddress("a valid protocol fee address"),
             collectedTokenAProtocolFees: BigInt(0),
             collectedTokenBProtocolFees: BigInt(0),
-            wallet0: randomAddress("wallet0"),
-            wallet1: randomAddress("wallet1"),
+            wallet0: walletZeroAddress,
+            wallet1: walletOneAddress,
             reserve0: BigInt(0),
             reserve1: BigInt(0),
             supplyLP: BigInt(0),
@@ -198,8 +203,8 @@ describe('Pool', () => {
         protocolFeesAddress: randomAddress("a valid protocol fee address"),
         collectedTokenAProtocolFees: BigInt(0),
         collectedTokenBProtocolFees: BigInt(0),
-        wallet0: randomAddress("wallet0"),
-        wallet1: randomAddress("wallet1"),
+        wallet0: walletZeroAddress,
+        wallet1: walletOneAddress,
         reserve0: BigInt(10000),
         reserve1: BigInt(204030300),
         supplyLP: BigInt(1000),
@@ -299,8 +304,8 @@ describe('Pool', () => {
             protocolFeesAddress: zeroAddress,
             collectedTokenAProtocolFees: BigInt(110),
             collectedTokenBProtocolFees: BigInt(440),
-            wallet0: randomAddress("wallet0"),
-            wallet1: randomAddress("wallet1"),
+            wallet0: walletZeroAddress,
+            wallet1: walletOneAddress,
             reserve0: BigInt(1310),
             reserve1: BigInt(203333),
             supplyLP: BigInt(10000000),
@@ -337,8 +342,8 @@ describe('Pool', () => {
             protocolFeesAddress: randomAddress("a valid protocol fee address"),
             collectedTokenAProtocolFees: BigInt(110),
             collectedTokenBProtocolFees: BigInt(440),
-            wallet0: randomAddress("wallet0"),
-            wallet1: randomAddress("wallet1"),
+            wallet0: walletZeroAddress,
+            wallet1: walletOneAddress,
             reserve0: BigInt(1310),
             reserve1: BigInt(203333),
             supplyLP: BigInt(10000000),
@@ -391,8 +396,8 @@ describe('Pool', () => {
         protocolFeesAddress: randomAddress("a valid protocol fee address"),
         collectedTokenAProtocolFees: BigInt(11000000000000),
         collectedTokenBProtocolFees: BigInt(4400000000000000),
-        wallet0: randomAddress("wallet0"),
-        wallet1: randomAddress("wallet1"),
+        wallet0: walletZeroAddress,
+        wallet1: walletOneAddress,
         reserve0: BigInt(1310),
         reserve1: BigInt(203333),
         supplyLP: BigInt(10000000),
@@ -460,8 +465,8 @@ describe('Pool', () => {
             protocolFeesAddress: randomAddress("a valid protocol fee address"),
             collectedTokenAProtocolFees: BigInt(0),
             collectedTokenBProtocolFees: BigInt(0),
-            wallet0: randomAddress("wallet0"),
-            wallet1: randomAddress("wallet1"),
+            wallet0: walletZeroAddress,
+            wallet1: walletOneAddress,
             reserve0: BigInt(1000000000000000),
             reserve1: BigInt(1000000000000000),
             supplyLP: BigInt(10000000),
@@ -498,7 +503,7 @@ describe('Pool', () => {
         
 const callGetOutputs = await blockchain.runGetMethod( pool.address,"get_expected_outputs", [
       { type: "int", value: BigInt(20000000000) },
-      { type: "slice", cell: beginCell().storeAddress(randomAddress("wallet0")).endCell()}
+      { type: "slice", cell: beginCell().storeAddress(walletZeroAddress).endCell()}
     ]);
 
     const expectedSwapWallet0  = (callGetOutputs.stack[0] as TupleItemInt).value;
@@ -513,7 +518,7 @@ const callGetOutputs = await blockchain.runGetMethod( pool.address,"get_expected
             body: pool.swap({
                 fromAddress: randomAddress("user1"),
                 jettonAmount: BigInt(20000000000),
-                tokenWallet: randomAddress("wallet1"),
+                tokenWallet: walletOneAddress,
                 toAddress: randomAddress("user1"),
                 minOutput: BigInt(200),
               }),
@@ -536,7 +541,7 @@ const callGetOutputs = await blockchain.runGetMethod( pool.address,"get_expected
             body: pool.swap({
                 fromAddress: randomAddress("user1"),
                 jettonAmount: BigInt(20000000000),
-                tokenWallet: randomAddress("wallet0"),
+                tokenWallet: walletZeroAddress,
                 toAddress: randomAddress("user1"),
                 minOutput: BigInt(200),
               }),
@@ -565,7 +570,7 @@ const callGetOutputs = await blockchain.runGetMethod( pool.address,"get_expected
     // After performing a swap, the expected output for the same swap should be lower
     const expectedOutputsAfterSwap = await blockchain.runGetMethod(pool.address,"get_expected_outputs", [
         { type: "int", value: BigInt(20000000000) },
-        { type: "slice", cell: beginCell().storeAddress(randomAddress("wallet0")).endCell()},
+        { type: "slice", cell: beginCell().storeAddress(walletZeroAddress).endCell()},
       ]);
 
       const expectedWallet0AfterSwap  = (expectedOutputsAfterSwap.stack[0] as TupleItemInt).value;
@@ -573,15 +578,12 @@ const callGetOutputs = await blockchain.runGetMethod( pool.address,"get_expected
   });
 
   it("should send back token when reject swap", async () => {
-    
     await deployer.send({
         to: pool.address,
         value: toNano(5), 
     });  
 
         // Deploy a pool with different parameters: big zero fees, valid addres, 1:1 asset balance
-        const walletZero = randomAddress("wallet0")
-        const walletOne = randomAddress("wallet1")
         pool = blockchain.openContract(Pool.createFromConfig({        
             routerAddress: routerAddress,
             lpFee: BigInt(20),
@@ -590,8 +592,8 @@ const callGetOutputs = await blockchain.runGetMethod( pool.address,"get_expected
             protocolFeesAddress: randomAddress("a valid protocol fee address"),
             collectedTokenAProtocolFees: BigInt(0),
             collectedTokenBProtocolFees: BigInt(0),
-            wallet0: walletZero,
-            wallet1: walletOne,
+            wallet0: walletZeroAddress,
+            wallet1: walletOneAddress,
             reserve0: BigInt(1000),
             reserve1: BigInt(10000),
             supplyLP: BigInt(0),
@@ -610,7 +612,7 @@ const callGetOutputs = await blockchain.runGetMethod( pool.address,"get_expected
                 body: pool.swap({
                     fromAddress: randomAddress("user1"),
                     jettonAmount: BigInt(20),
-                    tokenWallet: walletOne,
+                    tokenWallet: walletOneAddress,
                     toAddress: randomAddress("user1"),
                     minOutput: BigInt(20000000),
                   }),
@@ -632,9 +634,9 @@ const callGetOutputs = await blockchain.runGetMethod( pool.address,"get_expected
 
         let sendSwapRefs = swapMsg.body.refs[0].beginParse()
     expect(sendSwapRefs.loadCoins()).toBe(0n);
-    expect(sendSwapRefs.loadAddress().equals(walletZero)).toBeTruthy
+    expect(sendSwapRefs.loadAddress().equals(walletZeroAddress)).toBeTruthy
     expect(sendSwapRefs.loadCoins()).toBe(20n);
-    expect(sendSwapRefs.loadAddress().equals(walletOne)).toBeTruthy
+    expect(sendSwapRefs.loadAddress().equals(walletOneAddress)).toBeTruthy
 
   });
 
@@ -650,8 +652,8 @@ const callGetOutputs = await blockchain.runGetMethod( pool.address,"get_expected
 //         protocolFeesAddress: randomAddress("a valid protocol fee address"),
 //         collectedTokenAProtocolFees: new BN(0),
 //         collectedTokenBProtocolFees: new BN(0),
-//         wallet0: randomAddress("wallet0"),
-//         wallet1: randomAddress("wallet1"),
+//         wallet0: walletZeroAddress,
+//         wallet1: walletOneAddress,
 //         reserve0: new BN("1000000000000000000000000000000000"),
 //         reserve1: new BN("1000000000000000000000000000000000"),
 //         supplyLP: new BN(100000),
@@ -667,7 +669,7 @@ const callGetOutputs = await blockchain.runGetMethod( pool.address,"get_expected
 //         body: pool.swap({
 //           fromAddress: randomAddress("user1"),
 //           jettonAmount: new BN("20000"),
-//           tokenWallet: randomAddress("wallet1"),
+//           tokenWallet: walletOneAddress,
 //           minOutput: new BN("0"),
 //           toAddress: randomAddress("user1"),
 //           hasRef: true,
@@ -685,14 +687,14 @@ const callGetOutputs = await blockchain.runGetMethod( pool.address,"get_expected
 
 //     let tokenOutUser = msgOutUser.body.beginParse().readRef();
 //     expect(tokenOutUser.readCoins()).to.be.a.bignumber.that.is.equal(new BN(19939));
-//     expect(tokenOutUser.readAddress()?.toString()).to.be.equal(randomAddress("wallet0").toString());
+//     expect(tokenOutUser.readAddress()?.toString()).to.be.equal(walletZeroAddress.toString());
 
 //     let msgOutRef = (sendWithRef.actionList[0] as SendMsgAction).message;
 //     expect(msgOutRef.info.dest?.toString()).to.be.equal(routerAddress.toString());
 
 //     let tokenOutRef = msgOutRef.body.beginParse().readRef();
 //     expect(tokenOutRef.readCoins()).to.be.a.bignumber.that.is.equal(new BN(20));
-//     expect(tokenOutRef.readAddress()?.toString()).to.be.equal(randomAddress("wallet0").toString());
+//     expect(tokenOutRef.readAddress()?.toString()).to.be.equal(walletZeroAddress.toString());
 //   });
 
   /*
