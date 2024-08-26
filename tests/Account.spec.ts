@@ -1,13 +1,11 @@
 import { Blockchain, EventAccountCreated, EventMessageSent, SandboxContract, TreasuryContract, internal, printTransactionFees } from '@ton/sandbox';
-import { Address, Cell, TupleItemInt, TupleItemSlice, beginCell, toNano } from '@ton/core';
-import { Pool } from '../wrappers/Pool';
+import { Address, Cell, toNano } from '@ton/core';
 import { compile } from '@ton/blueprint';
-import { getBlockchainPresetConfig, parseUri, randomAddress, zeroAddress } from './lib/helpers';
+import { randomAddress } from './lib/helpers';
 import { Account } from '../wrappers/Account';
 
 /** Import the TON matchers */
 import "@ton/test-utils";
-import exp from 'constants';
 
 describe('Account', () => {
     let walletCode: Cell;
