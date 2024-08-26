@@ -290,8 +290,6 @@ describe('Pool', () => {
             value: toNano(5), 
         });  
 
-// TODO setup the Jettison contracts and state in the sandbox, loading and setting the Blockchain config takes a serious amount of time!
-
         // Change the chain state
     blockchain.setConfig(getBlockchainPresetConfig());
 
