@@ -3,10 +3,11 @@ import { Address, Cell, TupleItemInt, TupleItemSlice, beginCell, toNano } from '
 import { Pool } from '../wrappers/Pool';
 import { compile } from '@ton/blueprint';
 import { getBlockchainPresetConfig, parseUri, randomAddress, zeroAddress } from './lib/helpers';
+import { Account } from '../wrappers/Account';
 
 /** Import the TON matchers */
 import "@ton/test-utils";
-import { Account } from '../wrappers/Account';
+import exp from 'constants';
 
 describe('Account', () => {
     let walletCode: Cell;
@@ -224,4 +225,95 @@ expect(sendRefund.transactions).toHaveTransaction({
 expect(sendRefund.events.length).toBe(0)
     });
 
+
+    it("should ask for minting new liquidity directly", async () => {
+        const sendWrongSender = await blockchain.sendMessage(
+            internal({
+                from: randomAddress("someone"),
+                to: account.address,
+                value: toNano(7000000000),
+                body: account.directAddLiquidity({
+                    amount0: toNano(1),
+                    amount1: toNano(0),
+                    minLPOut: toNano(1),
+                }),
+                })
+        );
+        expect(sendWrongSender.transactions).toHaveTransaction({
+            from: randomAddress("someone"),
+            to: account.address,
+            success: false
+        });
+
+
+        const sendLowBalances = await blockchain.sendMessage(
+            internal({
+                from: userAddress,
+                to: account.address,
+                value: toNano(7000000000),
+                body: account.directAddLiquidity({
+                    amount0: toNano(1),
+                    amount1: toNano(0),
+                    minLPOut: toNano(1),
+                }),
+                })
+        );
+        expect(sendLowBalances.transactions).toHaveTransaction({
+            from: userAddress,
+            to: account.address,
+            success: false
+        });
+
+
+        await deployer.send({
+            to: account.address,
+            value: toNano(5), 
+        });  
+
+        // Account where the user has balances
+        account = blockchain.openContract(Account.createFromConfig({ 
+            user: userAddress,
+            pool: poolAddress,
+            stored0: toNano(10),
+            stored1: toNano(10),
+        }, accountCode));
+
+        await deployAccount();
+
+        const send = await blockchain.sendMessage(
+            internal({
+                from: userAddress,
+                to: account.address,
+                value: toNano(7000000000),
+                body: account.directAddLiquidity({
+                    amount0: toNano(1),
+                    amount1: toNano(3),
+                    minLPOut: toNano(1),
+                }),
+                })
+        );
+
+        expect(send.transactions).toHaveTransaction({
+            from: userAddress,
+            to: account.address,
+            success: true
+        });
+        expect(send.events.length).toBe(2)
+        expect(send.events[0].type).toBe('message_sent')
+        expect(send.events[1].type).toBe('message_sent')
+        
+        const eventZero = send.events[0] as EventMessageSent
+        expect(eventZero.from).toEqualAddress(account.address)
+        expect(eventZero.to).toEqualAddress(poolAddress)
+        expect(eventZero.bounced).toBe(false)
+        
+        const eventOne = send.events[1] as EventMessageSent
+        expect(eventOne.from).toEqualAddress(poolAddress)
+        expect(eventOne.to).toEqualAddress(account.address)
+        expect(eventOne.bounced).toBe(true)
+    });
+
 })
+
+
+//TODO remove Account -> LpAccount (conflice with TON Account)
