@@ -147,12 +147,12 @@ describe('Pool', () => {
       });
 
   it("should reset gas", async () => {
-        await deployer.send({
+    const userAddres =randomAddress("user");
+    
+    await deployer.send({
             to: pool.address,
             value: toNano(5), 
         });  
-
-        const userAddres =randomAddress("user");
 
         // Reset the gas
         const resetGasResult = await blockchain.sendMessage(
@@ -640,62 +640,82 @@ const callGetOutputs = await blockchain.runGetMethod( pool.address,"get_expected
 
   });
 
-//   it("should swap with referall", async () => {
-//     setBalance(contract, toNano(5));
-//     setNetworkConfig(contract);
-//     contract.setDataCell(
-//       pool.data({
-//         routerAddress: routerAddress,
-//         lpFee: new BN(20),
-//         protocolFee: new BN(0),
-//         refFee: new BN(10),
-//         protocolFeesAddress: randomAddress("a valid protocol fee address"),
-//         collectedTokenAProtocolFees: new BN(0),
-//         collectedTokenBProtocolFees: new BN(0),
-//         wallet0: walletZeroAddress,
-//         wallet1: walletOneAddress,
-//         reserve0: new BN("1000000000000000000000000000000000"),
-//         reserve1: new BN("1000000000000000000000000000000000"),
-//         supplyLP: new BN(100000),
-//         LPWalletCode: Cell.fromBoc(fs.readFileSync("build/lp_wallet.cell"))[0],
-//         LPAccountCode: Cell.fromBoc(fs.readFileSync("build/lp_account.cell"))[0],
-//       })
-//     );
+  it("should swap with referall", async () => {
+    await deployer.send({
+        to: pool.address,
+        value: toNano(5), 
+    });  
 
-//     const sendWithRef = await contract.sendInternalMessage(
-//       internalMessage({
-//         from: routerAddress,
-//         value: toNano(1),
-//         body: pool.swap({
-//           fromAddress: randomAddress("user1"),
-//           jettonAmount: new BN("20000"),
-//           tokenWallet: walletOneAddress,
-//           minOutput: new BN("0"),
-//           toAddress: randomAddress("user1"),
-//           hasRef: true,
-//           refAddress: randomAddress("ref"),
-//         }),
-//       })
-//     );
-//     expect(sendWithRef.type).to.be.equal("success");
-//     expect(sendWithRef.actionList.length).to.be.equal(2);
-//     expect(sendWithRef.actionList[0].type).to.be.equal("send_msg");
-//     expect(sendWithRef.actionList[1].type).to.be.equal("send_msg");
+        // Change the chain state
+        blockchain.setConfig(getBlockchainPresetConfig());
 
-//     let msgOutUser = (sendWithRef.actionList[1] as SendMsgAction).message;
-//     expect(msgOutUser.info.dest?.toString()).to.be.equal(routerAddress.toString());
 
-//     let tokenOutUser = msgOutUser.body.beginParse().readRef();
-//     expect(tokenOutUser.readCoins()).to.be.a.bignumber.that.is.equal(new BN(19939));
-//     expect(tokenOutUser.readAddress()?.toString()).to.be.equal(walletZeroAddress.toString());
+        // Deploy a pool with different parameters: big zero fees, valid addres, 1:1 asset balance
+        pool = blockchain.openContract(Pool.createFromConfig({        
+            routerAddress: routerAddress,
+            lpFee: BigInt(20),
+            protocolFee: BigInt(0),
+            refFee: BigInt(10),
+            protocolFeesAddress: randomAddress("a valid protocol fee address"),
+            collectedTokenAProtocolFees: BigInt(0),
+            collectedTokenBProtocolFees: BigInt(0),
+            wallet0: walletZeroAddress,
+            wallet1: walletOneAddress,
+            reserve0: BigInt("1000000000000000000000000000000000"),
+            reserve1: BigInt("1000000000000000000000000000000000"),
+            supplyLP: BigInt(100000),
+            LPWalletCode: walletCode,
+            LPAccountCode: accountCode
+        }, poolCode));
 
-//     let msgOutRef = (sendWithRef.actionList[0] as SendMsgAction).message;
-//     expect(msgOutRef.info.dest?.toString()).to.be.equal(routerAddress.toString());
+        await deployPool();
 
-//     let tokenOutRef = msgOutRef.body.beginParse().readRef();
-//     expect(tokenOutRef.readCoins()).to.be.a.bignumber.that.is.equal(new BN(20));
-//     expect(tokenOutRef.readAddress()?.toString()).to.be.equal(walletZeroAddress.toString());
-//   });
+        // Swap internal message, with any output acceptable and ref address
+        const sendSwap = await blockchain.sendMessage(
+            internal({
+                from: routerAddress,
+                to: pool.address,
+                value: toNano(1),
+                body: pool.swap({
+                    fromAddress: randomAddress("user1"),
+                    jettonAmount: BigInt(20000),
+                    tokenWallet: walletOneAddress,
+                    toAddress: randomAddress("user1"),
+                    minOutput: BigInt(0),
+                    hasRef: true,
+                    refAddress: randomAddress("ref")
+                  }),
+                })
+        );
+
+        
+        expect(sendSwap.transactions).toHaveTransaction({
+            from: routerAddress,
+            to: pool.address,
+            success: true
+        });
+
+        expect(sendSwap.events.length).toBe(2)
+        expect(sendSwap.events[0].type).toBe('message_sent')
+        expect(sendSwap.events[1].type).toBe('message_sent')
+
+        const msgOutUser = sendSwap.events[1] as EventMessageSent
+        expect(msgOutUser.from).toEqualAddress(pool.address)
+        expect(msgOutUser.to).toEqualAddress(routerAddress)
+
+        const msgOutRef = sendSwap.events[0] as EventMessageSent
+        expect(msgOutRef.from).toEqualAddress(pool.address)
+        expect(msgOutRef.to).toEqualAddress(routerAddress)
+
+        let tokenOutUserRefs = msgOutUser.body.refs[0].beginParse()
+    expect(tokenOutUserRefs.loadCoins()).toBe(BigInt(19939));
+    expect(tokenOutUserRefs.loadAddress().equals(walletZeroAddress)).toBeTruthy;
+
+
+    let tokenRefOutRefs = msgOutRef.body.refs[0].beginParse()
+    expect(tokenRefOutRefs.loadCoins()).toBe(BigInt(20));
+    expect(tokenRefOutRefs.loadAddress().equals(walletZeroAddress)).toBeTruthy;
+  });
 
   /*
   it("should generate a valid jetton URI", async () => {
