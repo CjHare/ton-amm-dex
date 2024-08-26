@@ -8,24 +8,15 @@ import { LpAccount } from '../wrappers/LpAccount';
 import "@ton/test-utils";
 
 describe('LP Account', () => {
-    let walletCode: Cell;
     let accountCode: Cell;
     let routerAddress: Address;
-    let walletOneAddress: Address;
-    let walletZeroAddress: Address;
     let poolAddress : Address;
     let userAddress: Address;
 
     beforeAll(async () => {
-        walletCode = await compile('Wallet');
         accountCode = await compile('LpAccount');
-        walletZeroAddress = randomAddress("wallet0")
-        walletOneAddress = randomAddress("wallet1")
-
         poolAddress = randomAddress("pool");
         userAddress = randomAddress("user");
-
-    
     });
 
     let blockchain: Blockchain;
@@ -386,6 +377,3 @@ expect(sendRefund.events.length).toBe(0)
     });
 
 })
-
-
-//TODO remove Account -> LpAccount (conflice with TON Account)
