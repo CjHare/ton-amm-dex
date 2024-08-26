@@ -1,14 +1,14 @@
 import { Address, beginCell, Cell, Contract, contractAddress, ContractProvider, Sender, SendMode } from '@ton/core';
 import { beginMessage } from "./lib/helpers";
 
-export type AccountConfig = { 
+export type LpAccountConfig = { 
     user: Address;
     pool: Address;
     stored0: bigint;
     stored1: bigint;
 };
 
-export function accountConfigToCell(config: AccountConfig): Cell {
+export function accountConfigToCell(config: LpAccountConfig): Cell {
     return beginCell()
         .storeAddress(config.user)
         .storeAddress(config.pool)
@@ -17,17 +17,17 @@ export function accountConfigToCell(config: AccountConfig): Cell {
         .endCell();
 }
 
-export class Account implements Contract {
+export class LpAccount implements Contract {
     constructor(readonly address: Address, readonly init?: { code: Cell; data: Cell }) {}
 
     static createFromAddress(address: Address) {
-        return new Account(address);
+        return new LpAccount(address);
     }
 
-    static createFromConfig(config:  AccountConfig, code: Cell, workchain = 0) {
+    static createFromConfig(config:  LpAccountConfig, code: Cell, workchain = 0) {
         const data = accountConfigToCell(config);
         const init = { code, data };
-        return new Account(contractAddress(workchain, init), init);
+        return new LpAccount(contractAddress(workchain, init), init);
     }
 
     async sendDeploy(provider: ContractProvider, via: Sender, value: bigint) {

@@ -2,12 +2,12 @@ import { Blockchain, EventAccountCreated, EventMessageSent, SandboxContract, Tre
 import { Address, Cell, toNano } from '@ton/core';
 import { compile } from '@ton/blueprint';
 import { randomAddress } from './lib/helpers';
-import { Account } from '../wrappers/Account';
+import { LpAccount } from '../wrappers/LpAccount';
 
 /** Import the TON matchers */
 import "@ton/test-utils";
 
-describe('Account', () => {
+describe('LP Account', () => {
     let walletCode: Cell;
     let accountCode: Cell;
     let routerAddress: Address;
@@ -18,7 +18,7 @@ describe('Account', () => {
 
     beforeAll(async () => {
         walletCode = await compile('Wallet');
-        accountCode = await compile('Account');
+        accountCode = await compile('LpAccount');
         walletZeroAddress = randomAddress("wallet0")
         walletOneAddress = randomAddress("wallet1")
 
@@ -30,14 +30,14 @@ describe('Account', () => {
 
     let blockchain: Blockchain;
     let deployer: SandboxContract<TreasuryContract>;
-    let account: SandboxContract<Account>;
+    let account: SandboxContract<LpAccount>;
 
     beforeEach(async () => {
         blockchain = await Blockchain.create();
 
         routerAddress = randomAddress("a valid pool");
 
-        account = blockchain.openContract(Account.createFromConfig({ 
+        account = blockchain.openContract(LpAccount.createFromConfig({ 
             user: userAddress,
             pool: poolAddress,
             stored0: toNano(0),
@@ -268,7 +268,7 @@ expect(sendRefund.events.length).toBe(0)
         });  
 
         // Account where the user has balances
-        account = blockchain.openContract(Account.createFromConfig({ 
+        account = blockchain.openContract(LpAccount.createFromConfig({ 
             user: userAddress,
             pool: poolAddress,
             stored0: toNano(10),
@@ -346,7 +346,7 @@ expect(sendRefund.events.length).toBe(0)
         });  
 
         // Account where the user has balances
-        account = blockchain.openContract(Account.createFromConfig({ 
+        account = blockchain.openContract(LpAccount.createFromConfig({ 
             user: userAddress,
             pool: poolAddress,
             stored0: toNano(10),
