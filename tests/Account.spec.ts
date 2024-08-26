@@ -64,11 +64,13 @@ describe('Account', () => {
         expect(deployResult.events.length).toBe(2)
         expect(deployResult.events[0].type).toBe('message_sent')
         expect(deployResult.events[1].type).toBe('account_created')
-        const eventMsgSendToken0 = deployResult.events[0] as EventMessageSent
-        const eventCreateSendToken0 = deployResult.events[1] as EventAccountCreated
-        expect(eventMsgSendToken0.from.equals(deployer.address)).toBeTruthy
-        expect(eventMsgSendToken0.to.equals(account.address)).toBeTruthy        
-    }
+
+        const deployEventMsg = deployResult.events[0] as EventMessageSent
+        expect(deployEventMsg.from).toEqualAddress(deployer.address)
+        expect(deployEventMsg.to).toEqualAddress(account.address)        
+        const createEventMsg = deployResult.events[1] as EventAccountCreated
+        expect(createEventMsg.account).toEqualAddress(account.address)
+        }
 
     it("should reset gas", async () => {
         await deployer.send({
@@ -114,14 +116,14 @@ describe('Account', () => {
         expect(sendResetGas.events[0].type).toBe('message_sent')
         expect(sendResetGas.events[1].type).toBe('message_sent')
 
-        const resetGasMsgZero = sendResetGas.events[0] as EventMessageSent
-        expect(resetGasMsgZero.from).toEqualAddress(account.address)
-        expect(resetGasMsgZero.to).toEqualAddress(userAddress)
-        expect(resetGasMsgZero.bounced).toBe(false)
+        const resetGasEventZero = sendResetGas.events[0] as EventMessageSent
+        expect(resetGasEventZero.from).toEqualAddress(account.address)
+        expect(resetGasEventZero.to).toEqualAddress(userAddress)
+        expect(resetGasEventZero.bounced).toBe(false)
 
-        const resetGasMsgOne = sendResetGas.events[1] as EventMessageSent
-        expect(resetGasMsgOne.from).toEqualAddress(userAddress)
-        expect(resetGasMsgOne.to).toEqualAddress(account.address)
-        expect(resetGasMsgZero.bounced).toBe(false)
+        const resetGasEventOne = sendResetGas.events[1] as EventMessageSent
+        expect(resetGasEventOne.from).toEqualAddress(userAddress)
+        expect(resetGasEventOne.to).toEqualAddress(account.address)
+        expect(resetGasEventOne.bounced).toBe(false)
     });
 })

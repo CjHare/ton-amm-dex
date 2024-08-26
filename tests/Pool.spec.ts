@@ -69,10 +69,12 @@ describe('Pool', () => {
         expect(deployResult.events.length).toBe(2)
         expect(deployResult.events[0].type).toBe('message_sent')
         expect(deployResult.events[1].type).toBe('account_created')
-        const eventMsgSendToken0 = deployResult.events[0] as EventMessageSent
-        const eventCreateSendToken0 = deployResult.events[1] as EventAccountCreated
-        expect(eventMsgSendToken0.from.equals(deployer.address)).toBeTruthy
-        expect(eventMsgSendToken0.to.equals(pool.address)).toBeTruthy        
+
+        const deployEventMsg = deployResult.events[0] as EventMessageSent
+        expect(deployEventMsg.from).toEqualAddress(deployer.address)
+        expect(deployEventMsg.to).toEqualAddress(pool.address)        
+        const createEventMsg = deployResult.events[1] as EventAccountCreated
+        expect(createEventMsg.account).toEqualAddress(pool.address)
     }
 
     it('should deploy', async () => {
@@ -114,8 +116,8 @@ describe('Pool', () => {
         expect(sendToken0.events[1].type).toBe('account_created')
         const eventMsgSendToken0 = sendToken0.events[0] as EventMessageSent
         const eventCreateSendToken0 = sendToken0.events[1] as EventAccountCreated
-        expect(eventMsgSendToken0.from.equals(pool.address)).toBeTruthy
-        expect(eventMsgSendToken0.to.equals(eventCreateSendToken0.account)).toBeTruthy
+        expect(eventMsgSendToken0.from).toEqualAddress(pool.address)
+        expect(eventMsgSendToken0.to).toEqualAddress(eventCreateSendToken0.account)
 
         // Supply the other side of the LP pool
         const sendToken1 = await blockchain.sendMessage(
@@ -147,8 +149,6 @@ describe('Pool', () => {
       });
 
   it("should reset gas", async () => {
-    const userAddres =randomAddress("user");
-    
     await deployer.send({
             to: pool.address,
             value: toNano(5), 
@@ -170,16 +170,16 @@ describe('Pool', () => {
             success: true,
         });
 
-                // Reset gas message from user wallet, then creation of user wallet
         expect(resetGasResult.events).toHaveLength(2);    
          expect(resetGasResult.events[0].type).toBe('message_sent')
          expect(resetGasResult.events[1].type).toBe('message_sent')
-         const eventMsgSendToken0 =resetGasResult.events[1] as EventMessageSent
-         expect(eventMsgSendToken0.from.equals(pool.address)).toBeTruthy
-         expect(eventMsgSendToken0.to.equals(routerAddress)).toBeTruthy
-         const eventMsgSendToken1 =  resetGasResult.events[0] as EventMessageSent
-         expect(eventMsgSendToken1.from.equals(userAddres)).toBeTruthy
-         expect(eventMsgSendToken1.to.equals(pool.address)).toBeTruthy
+
+         const eventMsgSendToken0 =resetGasResult.events[0] as EventMessageSent
+         expect(eventMsgSendToken0.from).toEqualAddress(pool.address)
+         expect(eventMsgSendToken0.to).toEqualAddress(routerAddress)
+         const eventMsgSendToken1 =  resetGasResult.events[1] as EventMessageSent
+         expect(eventMsgSendToken1.from).toEqualAddress(routerAddress)
+         expect(eventMsgSendToken1.to).toEqualAddress(pool.address)
   });
 
   
