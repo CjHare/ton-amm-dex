@@ -15,7 +15,18 @@ export function randomAddress(seed: string, workchain?: number) {
   return new Address(workchain ?? 0, hash);
 }
 
-
+export function parseUri(cell: Cell) : string{
+  const prefix = 8
+  const payloadLength = cell.bits.length - prefix
+  const parsing = cell.beginParse().skip(prefix)
+  
+  return hexToUtf8(parsing.loadBits(payloadLength).toString())
+    }
+  
+    function hexToUtf8(hexString: string): string {
+      // NodeJS Buffer library for the conversion
+      return Buffer.from(hexString, 'hex').toString('utf-8');
+  }
 
 export function getBlockchainPresetConfig(): Cell {
   // this is a hack to set the network; a dump of the real network config ...good enough for testing

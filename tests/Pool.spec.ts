@@ -2,7 +2,7 @@ import { Blockchain, EventAccountCreated, EventMessageSent, SandboxContract, Tre
 import { Address, Cell, TupleItemInt, TupleItemSlice, beginCell, toNano } from '@ton/core';
 import { Pool } from '../wrappers/Pool';
 import { compile } from '@ton/blueprint';
-import { getBlockchainPresetConfig, randomAddress, zeroAddress } from './lib/helpers';
+import { getBlockchainPresetConfig, parseUri, randomAddress, zeroAddress } from './lib/helpers';
 
 /** Import the TON matchers */
 import "@ton/test-utils";
@@ -52,7 +52,7 @@ describe('Pool', () => {
 
         deployer = await blockchain.treasury('deployer');
 
-        deployPool();
+        await deployPool();
     });
 
     async function deployPool():Promise<void>{
@@ -717,16 +717,15 @@ const callGetOutputs = await blockchain.runGetMethod( pool.address,"get_expected
     expect(tokenRefOutRefs.loadAddress().equals(walletZeroAddress)).toBeTruthy;
   });
 
-  /*
+  
   it("should generate a valid jetton URI", async () => {
-    let anotherAddress = randomAddress("another address");
-    contract.setC7(
-      buildC7({
-        myself: anotherAddress,
-      })
-    );
-    const call2 = await contract.invokeGetMethod("get_jetton_data", []);
-    expect(parseUri(call2.result[3] as Cell)).to.be.equal("https://lp.ston.fi/" + anotherAddress.toString().toUpperCase() + ".json");
+    const expectedAddress = pool.address.toRawString().toUpperCase()
+
+    const callPoolData = await blockchain.runGetMethod(pool.address,"get_jetton_data", []);
+    expect(callPoolData.exitCode).toBe(0);
+
+      const expectedUri  = parseUri((callPoolData.stack[3] as TupleItemSlice).cell);
+    expect(expectedUri).toBe("https://lp.ston.fi/" + expectedAddress + ".json");
   });
-*/
+
 });
