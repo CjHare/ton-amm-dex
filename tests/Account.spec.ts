@@ -264,7 +264,6 @@ expect(sendRefund.events.length).toBe(0)
             success: false
         });
 
-
         await deployer.send({
             to: account.address,
             value: toNano(5), 
@@ -290,6 +289,81 @@ expect(sendRefund.events.length).toBe(0)
                     amount1: toNano(3),
                     minLPOut: toNano(1),
                 }),
+                })
+        );
+
+        expect(send.transactions).toHaveTransaction({
+            from: userAddress,
+            to: account.address,
+            success: true
+        });
+        expect(send.events.length).toBe(2)
+        expect(send.events[0].type).toBe('message_sent')
+        expect(send.events[1].type).toBe('message_sent')
+        
+        const eventZero = send.events[0] as EventMessageSent
+        expect(eventZero.from).toEqualAddress(account.address)
+        expect(eventZero.to).toEqualAddress(poolAddress)
+        expect(eventZero.bounced).toBe(false)
+        
+        const eventOne = send.events[1] as EventMessageSent
+        expect(eventOne.from).toEqualAddress(poolAddress)
+        expect(eventOne.to).toEqualAddress(account.address)
+        expect(eventOne.bounced).toBe(true)
+    });
+
+    it("should refund user", async () => {
+        const sendWrongSender = await blockchain.sendMessage(
+            internal({
+                from: randomAddress("someone"),
+                to: account.address,
+                value: toNano(7000000000),
+                body: account.refundMe()
+                })
+        );
+        expect(sendWrongSender.transactions).toHaveTransaction({
+            from: randomAddress("someone"),
+            to: account.address,
+            success: false
+        });
+        
+        
+        const sendLowBalances = await blockchain.sendMessage(
+            internal({
+                from: userAddress,
+                to: account.address,
+                value: toNano(7000000000),
+                body: account.refundMe()
+                })
+        );
+        expect(sendLowBalances.transactions).toHaveTransaction({
+            from: userAddress,
+            to: account.address,
+            success: false
+        });
+
+        await deployer.send({
+            to: account.address,
+            value: toNano(5), 
+        });  
+
+        // Account where the user has balances
+        account = blockchain.openContract(Account.createFromConfig({ 
+            user: userAddress,
+            pool: poolAddress,
+            stored0: toNano(10),
+            stored1: toNano(10),
+        }, accountCode));
+
+        await deployAccount();
+
+
+        const send = await blockchain.sendMessage(
+            internal({
+                from: userAddress,
+                to: account.address,
+                value: toNano(7000000000),
+                body: account.refundMe()
                 })
         );
 
