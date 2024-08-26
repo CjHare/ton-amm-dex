@@ -632,9 +632,9 @@ const callGetOutputs = await blockchain.runGetMethod( pool.address,"get_expected
 
         let sendSwapRefs = swapMsg.body.refs[0].beginParse()
     expect(sendSwapRefs.loadCoins()).toBe(0n);
-    expect(sendSwapRefs.loadAddress().equals(walletZeroAddress)).toBeTruthy
+    expect(sendSwapRefs.loadAddress()).toEqualAddress(walletZeroAddress)
     expect(sendSwapRefs.loadCoins()).toBe(20n);
-    expect(sendSwapRefs.loadAddress().equals(walletOneAddress)).toBeTruthy
+    expect(sendSwapRefs.loadAddress()).toEqualAddress(walletOneAddress)
 
   });
 
@@ -707,12 +707,12 @@ const callGetOutputs = await blockchain.runGetMethod( pool.address,"get_expected
 
         let tokenOutUserRefs = msgOutUser.body.refs[0].beginParse()
     expect(tokenOutUserRefs.loadCoins()).toBe(BigInt(19939));
-    expect(tokenOutUserRefs.loadAddress().equals(walletZeroAddress)).toBeTruthy;
+    expect(tokenOutUserRefs.loadAddress()).toEqualAddress(walletZeroAddress)
 
 
     let tokenRefOutRefs = msgOutRef.body.refs[0].beginParse()
     expect(tokenRefOutRefs.loadCoins()).toBe(BigInt(20));
-    expect(tokenRefOutRefs.loadAddress().equals(walletZeroAddress)).toBeTruthy;
+    expect(tokenRefOutRefs.loadAddress()).toEqualAddress(walletZeroAddress);
   });
 
   

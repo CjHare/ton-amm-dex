@@ -125,5 +125,3 @@ describe('Account', () => {
         expect(resetGasMsgZero.bounced).toBe(false)
     });
 })
-
-//TODO toBeTruthy should not be used - remove from Pool
