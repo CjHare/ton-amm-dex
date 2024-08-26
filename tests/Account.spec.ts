@@ -79,7 +79,7 @@ describe('Account', () => {
         });  
 
         // Message from the wrong address should fail
-        const sendCollectFeesWithRewards = await blockchain.sendMessage(
+        const sendResetGasWrongSender = await blockchain.sendMessage(
             internal({
                 from: randomAddress("someone"),
                 to: account.address,
@@ -89,7 +89,7 @@ describe('Account', () => {
         );
 
     
-        expect(sendCollectFeesWithRewards.transactions).toHaveTransaction({
+        expect(sendResetGasWrongSender.transactions).toHaveTransaction({
             from: randomAddress("someone"),
             to: account.address,
             success: false
@@ -124,6 +124,104 @@ describe('Account', () => {
         const resetGasEventOne = sendResetGas.events[1] as EventMessageSent
         expect(resetGasEventOne.from).toEqualAddress(userAddress)
         expect(resetGasEventOne.to).toEqualAddress(account.address)
-        expect(resetGasEventOne.bounced).toBe(false)
+        expect(resetGasEventOne.bounced).toBe(true)
     });
+
+    it("should store new liquidity and ask for minting", async () => {
+
+        // User is not allowed to add liquidity
+        const sendResetGasWrongSender = await blockchain.sendMessage(
+            internal({
+                from: userAddress,
+                to: account.address,
+                value: toNano(7000000000),
+                body: account.addLiquidity({
+                    newAmount0: toNano(1),
+                    newAmount1: toNano(0),
+                    minLPOut: toNano(1),
+                }),
+                })
+        );
+        expect(sendResetGasWrongSender.transactions).toHaveTransaction({
+            from: userAddress,
+            to: account.address,
+            success: false
+        });
+
+        // Add liquidty must come from the Pool
+        const sendAddLiquidity = await blockchain.sendMessage(
+            internal({
+                from: poolAddress,
+                to: account.address,
+                value: toNano(7000000000),
+                body: account.addLiquidity({
+                    newAmount0: toNano(1),
+                    newAmount1: toNano(0),
+                    minLPOut: toNano(1),
+                }),
+                })
+        );
+
+        expect(sendAddLiquidity.transactions).toHaveTransaction({
+            from: poolAddress,
+            to: account.address,
+            success: true
+        });
+        expect(sendAddLiquidity.events.length).toBe(0)
+
+
+
+const sendCB = await blockchain.sendMessage(
+    internal({
+        from: poolAddress,
+        to: account.address,
+        value: toNano(7000000000),
+        body: account.addLiquidity({
+            newAmount0: toNano(0),
+            newAmount1: toNano(10),
+            minLPOut: toNano(1),
+        }),
+        })
+);
+
+expect(sendCB.transactions).toHaveTransaction({
+    from: poolAddress,
+    to: account.address,
+    success: true
+});
+expect(sendCB.events.length).toBe(2)
+expect(sendCB.events[0].type).toBe('message_sent')
+expect(sendCB.events[1].type).toBe('message_sent')
+
+const cbEventZero = sendCB.events[0] as EventMessageSent
+expect(cbEventZero.from).toEqualAddress(account.address)
+expect(cbEventZero.to).toEqualAddress(poolAddress)
+expect(cbEventZero.bounced).toBe(false)
+
+const cbEventOne = sendCB.events[1] as EventMessageSent
+expect(cbEventOne.from).toEqualAddress(poolAddress)
+expect(cbEventOne.to).toEqualAddress(account.address)
+expect(cbEventOne.bounced).toBe(true)
+
+
+const sendRefund = await blockchain.sendMessage(
+    internal({
+        from: poolAddress,
+        to: account.address,
+        value: toNano(7000000000),
+        body: account.addLiquidity({
+            newAmount0: toNano(0),
+            newAmount1: toNano(10),
+            minLPOut: toNano(0),
+        }),
+        })
+);
+expect(sendRefund.transactions).toHaveTransaction({
+    from: poolAddress,
+    to: account.address,
+    success: true
+});
+expect(sendRefund.events.length).toBe(0)
+    });
+
 })
