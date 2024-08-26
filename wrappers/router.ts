@@ -106,16 +106,16 @@ export class Router implements Contract {
         jetton0Address: Address;
         jetton1Address: Address;
       }): Cell {
-        return beginMessage({ op: new BN(0x1fcb7d3d) })
+        return beginMessage({ op: BigInt(0x1fcb7d3d) })
           .storeAddress(params.jetton0Address)
           .storeAddress(params.jetton1Address)
           .endCell();
       }
       
-      payTo(params: { owner: Address; tokenAAmount: BN; walletTokenAAddress: Address; tokenBAmount: BN; walletTokenBAddress: Address }): Cell {
-        return beginMessage({ op: new BN(0xf93bb43f) })
+      payTo(params: { owner: Address; tokenAAmount: bigint; walletTokenAAddress: Address; tokenBAmount: bigint; walletTokenBAddress: Address }): Cell {
+        return beginMessage({ op: BigInt(0xf93bb43f) })
           .storeAddress(params.owner)
-          .storeUint(new BN(0), 32)
+          .storeUint(BigInt(0), 32)
           .storeRef(
             beginCell()
               .storeCoins(params.tokenAAmount)
