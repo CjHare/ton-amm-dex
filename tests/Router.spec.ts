@@ -225,16 +225,52 @@ describe('Router', () => {
         expect(eventMsgZero.to).toEqualAddress(someoneAddress)        
         expect(eventMsgZero.bounced).toBe(false)        
 
-const eventMsgZeroBody = eventMsgZero.body.beginParse()
-eventMsgZeroBody.skip(32 + 64)
-const secondAddress = eventMsgZeroBody.loadAddress()
-expect(secondAddress).toEqualAddress(poolAddress)
+        const eventMsgZeroBody = eventMsgZero.body.beginParse()
+        eventMsgZeroBody.skip(32 + 64)
+        const secondAddress = eventMsgZeroBody.loadAddress()
+        expect(secondAddress).toEqualAddress(poolAddress)
 
         const eventMsgOne = getPoolResult.events[1] as EventMessageSent
         expect(eventMsgOne.from).toEqualAddress(someoneAddress)
         expect(eventMsgOne.to).toEqualAddress(router.address)        
         expect(eventMsgOne.bounced).toBe(true)       
+
        })   
+
+       it("should refuse to pay if caller is not valid", async () => {
+        // Change the chain state
+        blockchain.setConfig(getBlockchainPresetConfig());
+        
+        const aRandomAddress = randomAddress("a random address")
+        const payToResult = await blockchain.sendMessage(
+            internal({
+                from: aRandomAddress ,
+                to: router.address,
+                value:  toNano("2"),
+                body: router.payTo({
+                    owner: randomAddress("owner"),
+                    tokenAAmount: BigInt(100),
+                    walletTokenAAddress: randomAddress("token wallet 1"),
+                    tokenBAmount: BigInt(200),
+                    walletTokenBAddress: randomAddress("token wallet 2"),
+                  })
+                })
+        )
+
+        expect(payToResult.transactions).toHaveTransaction({
+            from: aRandomAddress,
+            to: router.address,
+            success: false,
+        });
+        expect(payToResult.events.length).toBe(1)
+        expect(payToResult.events[0].type).toBe('message_sent')
+
+        const eventMsgZero = payToResult.events[0] as EventMessageSent
+        expect(eventMsgZero.from).toEqualAddress(router.address)        
+        expect(eventMsgZero.to).toEqualAddress(aRandomAddress)
+        expect(eventMsgZero.bounced).toBe(true) 
+      });
+       
 })
 
 
