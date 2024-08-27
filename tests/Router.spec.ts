@@ -310,7 +310,7 @@ describe('Router', () => {
         expect(eventMsgOne.to).toEqualAddress(router.address)
         expect(eventMsgOne.bounced).toBe(true) 
 
-
+        // Swap with a reference address
         const swapWithRefResult = await blockchain.sendMessage(
             internal({
                 from: tokenWallet0 ,
@@ -326,7 +326,6 @@ describe('Router', () => {
                   })
                 })
         )
-
 
         expect(swapWithRefResult.transactions).toHaveTransaction({
             from: tokenWallet0,
@@ -347,7 +346,59 @@ describe('Router', () => {
         expect(eventMsgRefOne.to).toEqualAddress(router.address)
         expect(eventMsgRefOne.bounced).toBe(true) 
       })
-          
+  
+      it("should route a lp request", async () => {
+        const walletAddress = randomAddress("a random token wallet")
+        const walletBAddress = randomAddress("token wallet 2")
+
+        const provideLiquidityResult = await blockchain.sendMessage(
+            internal({
+                from: walletAddress ,
+                to: router.address,
+                value:  BigInt("300000000"),
+                body: router.provideLiquidity({
+                  jettonAmount: BigInt(100),
+                  fromAddress: randomAddress("from"),
+                    walletTokenBAddress: walletBAddress,
+                    minLPOut: BigInt(100)
+                  })
+                })
+        )
+
+        expect(provideLiquidityResult.transactions).toHaveTransaction({
+            from: walletAddress,
+            to: router.address,
+            success: true,
+        });
+        expect(provideLiquidityResult.events.length).toBe(4)
+        expect(provideLiquidityResult.events[0].type).toBe('message_sent')
+        expect(provideLiquidityResult.events[1].type).toBe('account_created')
+        expect(provideLiquidityResult.events[2].type).toBe('message_sent')
+        expect(provideLiquidityResult.events[3].type).toBe('account_created')
+
+        const eventMsgZero = provideLiquidityResult.events[0] as EventMessageSent
+        expect(eventMsgZero.from).toEqualAddress(router.address)        
+        expect(eventMsgZero.to).not.toEqualAddress(walletAddress)
+        expect(eventMsgZero.to).not.toEqualAddress(walletBAddress)
+        expect(eventMsgZero.bounced).toBe(false) 
+        const lpWalletOneAddress = eventMsgZero.to
+
+        const eventMsgOne = provideLiquidityResult.events[1] as EventAccountCreated
+        expect(eventMsgOne.account).toEqualAddress(lpWalletOneAddress)
+
+        const eventMsgTwo = provideLiquidityResult.events[2] as EventMessageSent
+        expect(eventMsgTwo.from).toEqualAddress(lpWalletOneAddress)        
+        expect(eventMsgTwo.to).not.toEqualAddress(router.address)
+        expect(eventMsgTwo.to).not.toEqualAddress(walletAddress)
+        expect(eventMsgTwo.to).not.toEqualAddress(walletBAddress)
+        expect(eventMsgTwo.bounced).toBe(false) 
+        const lpWalletTwoAddress = eventMsgTwo.to     
+
+        const eventMsgThree = provideLiquidityResult.events[3] as EventAccountCreated
+        expect(eventMsgThree.account).toEqualAddress(lpWalletTwoAddress)
+
+      });
+
 })
 
 
