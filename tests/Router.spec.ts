@@ -1,7 +1,7 @@
 import { Blockchain, EventAccountCreated, EventMessageSent, SandboxContract, TreasuryContract, internal, printTransactionFees } from '@ton/sandbox';
 import { Address, Cell, TupleItemSlice, beginCell, toNano } from '@ton/core';
 import { compile } from '@ton/blueprint';
-import { randomAddress } from './lib/helpers';
+import { getBlockchainPresetConfig, randomAddress } from './lib/helpers';
 import { Router } from '../wrappers/Router';
 
 /** Import the TON matchers */
@@ -65,20 +65,20 @@ describe('Router', () => {
     }
 
     it("should get a valid pool address", async () => {
-        const poolAddr1 = beginCell().storeAddress(randomAddress("token wallet 1")).endCell();
-        const poolAddr2 = beginCell().storeAddress(randomAddress("token wallet 2")).endCell();
+        const tokenWalletOne = beginCell().storeAddress(randomAddress("token wallet 1")).endCell();
+        const tokenWaletTwo = beginCell().storeAddress(randomAddress("token wallet 2")).endCell();
 
         const call = await blockchain.runGetMethod(router.address, "get_pool_address", [
-          { type: "slice", cell: poolAddr1 },
-          { type: "slice", cell: poolAddr2 },
+          { type: "slice", cell: tokenWalletOne },
+          { type: "slice", cell: tokenWaletTwo },
         ]);
     
         expect(call.exitCode).toBe(0)
-
-        const userWalletAddress = (call.stack[0] as TupleItemSlice).cell?.beginParse().loadAddress();
-        expect(userWalletAddress).toBeDefined
+        const poolAddress = (call.stack[0] as TupleItemSlice).cell?.beginParse().loadAddress();
+        expect(poolAddress).toBeDefined
       });
 
+      // TODO this test is failing due to an `out of ton` action error, no idea why ...yet
       it("should reset gas", async () => {
         await deployer.send({
             to: router.address,
@@ -111,7 +111,69 @@ describe('Router', () => {
                  expect(eventMsgSendToken1.from).toEqualAddress(adminAddress)
                  expect(eventMsgSendToken1.to).toEqualAddress(router.address)
       });
+  
+      it("should pay if caller is valid", async () => {
+        // Change the chain state
+        blockchain.setConfig(getBlockchainPresetConfig());
+
+        const tokenWalletOneAddress = randomAddress("token wallet 1")
+        const tokenWalletTwoAddress = randomAddress("token wallet 2");
+
+        const call = await blockchain.runGetMethod(router.address, "get_pool_address", [
+          { type: "slice", cell: beginCell().storeAddress(tokenWalletOneAddress).endCell() },
+          { type: "slice", cell: beginCell().storeAddress(tokenWalletTwoAddress).endCell() },
+        ]);
+        const poolAddress = (call.stack[0] as TupleItemSlice).cell?.beginParse().loadAddress();
+
+        const payToResult = await blockchain.sendMessage(
+            internal({
+                from: poolAddress,
+                to: router.address,
+                value:  toNano(20),
+                body: router.payTo({
+                    owner: randomAddress("owner"),
+                    tokenAAmount: BigInt(100),
+                    walletTokenAAddress: tokenWalletOneAddress,
+                    tokenBAmount: BigInt(200),
+                    walletTokenBAddress: tokenWalletTwoAddress,
+                  })
+                })
+        )
     
+                expect(payToResult.transactions).toHaveTransaction({
+                    from: poolAddress,
+                    to: router.address,
+                    success: true,
+                });
+
+
+                expect(payToResult.events.length).toBe(4)
+                expect(payToResult.events[0].type).toBe('message_sent')
+                expect(payToResult.events[1].type).toBe('message_sent')
+                expect(payToResult.events[2].type).toBe('message_sent')
+                expect(payToResult.events[3].type).toBe('message_sent')
+        
+                const eventMsgZero = payToResult.events[0] as EventMessageSent
+                expect(eventMsgZero.from).toEqualAddress(router.address)
+                expect(eventMsgZero.to).toEqualAddress(tokenWalletOneAddress)        
+                expect(eventMsgZero.bounced).toBe(false)        
+
+                const eventMsgOne = payToResult.events[1] as EventMessageSent
+                expect(eventMsgOne.from).toEqualAddress(router.address)
+                expect(eventMsgOne.to).toEqualAddress(tokenWalletTwoAddress)        
+                expect(eventMsgOne.bounced).toBe(false)        
+
+                const eventMsgTwo = payToResult.events[2] as EventMessageSent
+                expect(eventMsgTwo.from).toEqualAddress(tokenWalletOneAddress)
+                expect(eventMsgTwo.to).toEqualAddress(router.address)        
+                expect(eventMsgTwo.bounced).toBe(true)       
+
+                const eventMsgThree = payToResult.events[3] as EventMessageSent
+                expect(eventMsgThree.from).toEqualAddress(tokenWalletTwoAddress)
+                expect(eventMsgThree.to).toEqualAddress(router.address)        
+                expect(eventMsgThree.bounced).toBe(true)       
+      });      
+
 })
 
 
