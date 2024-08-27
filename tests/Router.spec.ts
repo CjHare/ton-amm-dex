@@ -174,9 +174,72 @@ describe('Router', () => {
                 expect(eventMsgThree.bounced).toBe(true)       
       });      
 
+      it("should always get the same pool", async () => {
+        const tokenWalletOne = beginCell().storeAddress(randomAddress("token wallet 1")).endCell();
+        const tokenWaletTwo = beginCell().storeAddress(randomAddress("token wallet 2")).endCell();
+
+        const call = await blockchain.runGetMethod(router.address, "get_pool_address", [
+          { type: "slice", cell: tokenWalletOne },
+          { type: "slice", cell: tokenWaletTwo },
+        ]);
+    
+        expect(call.exitCode).toBe(0)
+        const poolAddress= (call.stack[0] as TupleItemSlice).cell?.beginParse().loadAddress();
+        expect(poolAddress).toBeDefined
+
+        const callTwo = await blockchain.runGetMethod(router.address, "get_pool_address", [
+            { type: "slice", cell: tokenWalletOne },
+            { type: "slice", cell: tokenWaletTwo },
+          ]);
+      
+          expect(callTwo.exitCode).toBe(0)
+          const poolAddressTwo= (callTwo.stack[0] as TupleItemSlice).cell?.beginParse().loadAddress();
+        
+          expect(poolAddress).toEqualAddress(poolAddressTwo)
+          
+
+          const someoneAddress = randomAddress("someone")
+        const getPoolResult = await blockchain.sendMessage(
+            internal({
+                from: someoneAddress,
+                to: router.address,
+                value:  BigInt("300000000"),
+                body: router.poolAddress({
+                    walletTokenAAddress: randomAddress("token wallet 1"),
+                    walletTokenBAddress: randomAddress("token wallet 2"),
+                  }),
+                })
+        )
+
+        expect(getPoolResult.transactions).toHaveTransaction({
+            from: someoneAddress,
+            to: router.address,
+            success: true,
+        });
+        expect(getPoolResult.events.length).toBe(2)
+        expect(getPoolResult.events[0].type).toBe('message_sent')
+        expect(getPoolResult.events[1].type).toBe('message_sent')
+
+        const eventMsgZero = getPoolResult.events[0] as EventMessageSent
+        expect(eventMsgZero.from).toEqualAddress(router.address)
+        expect(eventMsgZero.to).toEqualAddress(someoneAddress)        
+        expect(eventMsgZero.bounced).toBe(false)        
+
+const eventMsgZeroBody = eventMsgZero.body.beginParse()
+eventMsgZeroBody.skip(32 + 64)
+const secondAddress = eventMsgZeroBody.loadAddress()
+expect(secondAddress).toEqualAddress(poolAddress)
+
+        const eventMsgOne = getPoolResult.events[1] as EventMessageSent
+        expect(eventMsgOne.from).toEqualAddress(someoneAddress)
+        expect(eventMsgOne.to).toEqualAddress(router.address)        
+        expect(eventMsgOne.bounced).toBe(true)       
+       })   
 })
 
 
 
 
 //TODO rename Wallet -> LpWallet (keep consistent with Account)
+
+//TODO rename the Wrappers getters (TS inferrenace of get prefix being a member)

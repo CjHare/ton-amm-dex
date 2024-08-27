@@ -159,7 +159,7 @@ export class Router implements Contract {
           .endCell();
       }
       
-      getPoolAddress(params: { walletTokenAAddress: Address; walletTokenBAddress: Address }): Cell {
+      poolAddress(params: { walletTokenAAddress: Address; walletTokenBAddress: Address }): Cell {
         return beginMessage({ op: BigInt(0xd1db969b) })
           .storeAddress(params.walletTokenAAddress)
           .storeAddress(params.walletTokenBAddress)
