@@ -270,7 +270,84 @@ describe('Router', () => {
         expect(eventMsgZero.to).toEqualAddress(aRandomAddress)
         expect(eventMsgZero.bounced).toBe(true) 
       });
-       
+
+      it("should route a swap request", async () => {
+        const tokenWallet0 = randomAddress("a random token wallet")
+        const tokenWallet1 = randomAddress("token wallet 2");
+        const swapperAddress = randomAddress("swapper")
+
+        const swapWithoutRefResult = await blockchain.sendMessage(
+            internal({
+                from: tokenWallet0 ,
+                to: router.address,
+                value:  toNano("2"),
+                body: router.swap({
+                    jettonAmount: BigInt(100),
+                    fromAddress: swapperAddress,
+                    walletTokenBAddress: tokenWallet1,
+                    toAddress: swapperAddress,
+                    expectedOutput: BigInt(100)
+                  })
+                })
+        )
+
+        expect(swapWithoutRefResult.transactions).toHaveTransaction({
+            from: tokenWallet0,
+            to: router.address,
+            success: true,
+        });
+        expect(swapWithoutRefResult.events.length).toBe(2)
+        expect(swapWithoutRefResult.events[0].type).toBe('message_sent')
+        expect(swapWithoutRefResult.events[1].type).toBe('message_sent')
+
+        const eventMsgZero = swapWithoutRefResult.events[0] as EventMessageSent
+        expect(eventMsgZero.from).toEqualAddress(router.address)        
+        expect(eventMsgZero.to).not.toEqualAddress(tokenWallet0)
+        expect(eventMsgZero.bounced).toBe(false) 
+
+        const eventMsgOne = swapWithoutRefResult.events[1] as EventMessageSent
+        expect(eventMsgOne.from).not.toEqualAddress(tokenWallet0)        
+        expect(eventMsgOne.to).toEqualAddress(router.address)
+        expect(eventMsgOne.bounced).toBe(true) 
+
+
+        const swapWithRefResult = await blockchain.sendMessage(
+            internal({
+                from: tokenWallet0 ,
+                to: router.address,
+                value:  toNano("2"),
+                body: router.swap({
+                    jettonAmount: BigInt(100),
+                    fromAddress: swapperAddress,
+                    walletTokenBAddress: tokenWallet1,
+                    toAddress: swapperAddress,
+                    expectedOutput: BigInt(100),
+                    refAddress: randomAddress("ref"),
+                  })
+                })
+        )
+
+
+        expect(swapWithRefResult.transactions).toHaveTransaction({
+            from: tokenWallet0,
+            to: router.address,
+            success: true,
+        });
+        expect(swapWithRefResult.events.length).toBe(2)
+        expect(swapWithRefResult.events[0].type).toBe('message_sent')
+        expect(swapWithRefResult.events[1].type).toBe('message_sent')
+
+        const eventMsgRefZero = swapWithoutRefResult.events[0] as EventMessageSent
+        expect(eventMsgRefZero.from).toEqualAddress(router.address)        
+        expect(eventMsgRefZero.to).not.toEqualAddress(tokenWallet0)
+        expect(eventMsgRefZero.bounced).toBe(false) 
+
+        const eventMsgRefOne = swapWithoutRefResult.events[1] as EventMessageSent
+        expect(eventMsgRefOne.from).not.toEqualAddress(tokenWallet0)        
+        expect(eventMsgRefOne.to).toEqualAddress(router.address)
+        expect(eventMsgRefOne.bounced).toBe(true) 
+      })
+          
 })
 
 
