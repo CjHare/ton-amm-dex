@@ -19,7 +19,7 @@ describe('Router', () => {
         routerCode = await compile('Router');
         walletCode = await compile('Wallet');
         accountCode = await compile('LpAccount');
-        adminAddress = randomAddress("wallet0")    
+        adminAddress = randomAddress("admin")    
     });
 
     let blockchain: Blockchain;
@@ -79,7 +79,39 @@ describe('Router', () => {
         expect(userWalletAddress).toBeDefined
       });
 
-      
+      it("should reset gas", async () => {
+        await deployer.send({
+            to: router.address,
+            value: toNano(5), 
+        });
+        
+        const resetGasResult = await blockchain.sendMessage(
+            internal({
+                from: adminAddress,
+                to: router.address,
+                value:  toNano(70000000),
+                body: router.resetGas()
+                  })
+                )
+    
+                expect(resetGasResult.transactions).toHaveTransaction({
+                    from: adminAddress,
+                    to: router.address,
+                    success: true,
+                });
+        
+                expect(resetGasResult.events).toHaveLength(2);    
+                 expect(resetGasResult.events[0].type).toBe('message_sent')
+                 expect(resetGasResult.events[1].type).toBe('message_sent')
+        
+                 const eventMsgSendToken0 =resetGasResult.events[0] as EventMessageSent
+                 expect(eventMsgSendToken0.from).toEqualAddress(router.address)
+                 expect(eventMsgSendToken0.to).toEqualAddress(adminAddress)
+                 const eventMsgSendToken1 =  resetGasResult.events[1] as EventMessageSent
+                 expect(eventMsgSendToken1.from).toEqualAddress(adminAddress)
+                 expect(eventMsgSendToken1.to).toEqualAddress(router.address)
+      });
+    
 })
 
 

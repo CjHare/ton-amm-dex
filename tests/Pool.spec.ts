@@ -21,7 +21,7 @@ describe('Pool', () => {
         accountCode = await compile('LpAccount');
         walletZeroAddress = randomAddress("wallet0")
         walletOneAddress = randomAddress("wallet1")
-    
+        routerAddress = randomAddress("a valid pool");
     });
 
     let blockchain: Blockchain;
@@ -30,8 +30,6 @@ describe('Pool', () => {
 
     beforeEach(async () => {
         blockchain = await Blockchain.create();
-
-        routerAddress = randomAddress("a valid pool");
 
         pool = blockchain.openContract(Pool.createFromConfig({        
             routerAddress: routerAddress,
