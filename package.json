@@ -5,7 +5,7 @@
         "start": "blueprint run",
         "build": "blueprint build",
         "test": "jest --verbose",
-        "format": "prettier --config .prettierrc_ts --write '**/*.ts'"
+        "format": "prettier --write '**/*.ts'"
     },
     "devDependencies": {
         "@ton/blueprint": "^0.22.0",
