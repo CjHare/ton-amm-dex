@@ -91,7 +91,7 @@ describe('Router', () => {
 
         expect(call.exitCode).toBe(0)
         const poolAddress = (call.stack[0] as TupleItemSlice).cell?.beginParse().loadAddress()
-        expect(poolAddress).toBeDefined
+        expect(poolAddress).toBeDefined()
     })
 
     // TODO this test is failing due to an `out of ton` action error, no idea why ...yet
