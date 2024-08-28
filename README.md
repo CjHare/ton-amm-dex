@@ -13,20 +13,29 @@ Fork of [Ston FI](https://github.com/ston-fi/dex-core) at hash [6ab5b1c](https:/
 ## How to use
 
 ### Build
-
-`npx blueprint build` or `yarn blueprint build`
+```bash
+yarn blueprint build
+```
 
 ### Test
-
-`npx blueprint test` or `yarn blueprint test`
+```bash
+yarn blueprint test
+```
 
 ### Deploy or run another script
-
-`npx blueprint run` or `yarn blueprint run`
+```bash
+yarn blueprint run
+```
 
 ### Add a new contract
+```bash
+yarn blueprint create ContractName
+```
 
-`npx blueprint create ContractName` or `yarn blueprint create ContractName`
+### Prettier formatting
+```bash
+yarn prettier:ts
+```
 
 
 ## Web2 references

@@ -4,7 +4,8 @@
     "scripts": {
         "start": "blueprint run",
         "build": "blueprint build",
-        "test": "jest --verbose"
+        "test": "jest --verbose",
+        "prettier:ts": "prettier --write '**/*.ts'"
     },
     "devDependencies": {
         "@ton/blueprint": "^0.22.0",
