@@ -552,21 +552,62 @@ describe('Router', () => {
             success: true,
         });
         expect(send.events.length).toBe(2)
-
         expect(send.events[0].type).toBe('message_sent')
         expect(send.events[1].type).toBe('message_sent')
 
+        // Message to the pool
         const eventMsgZero = send.events[0] as EventMessageSent
         expect(eventMsgZero.from).toEqualAddress(router.address)
         expect(eventMsgZero.to).not.toEqualAddress(jettonAddressZero)
         expect(eventMsgZero.to).not.toEqualAddress(jettonAddressOne)
+        const poolAddress = eventMsgZero.to
 
-
+        // Message (fees collected) back from the pool
         const eventMsgOne = send.events[1] as EventMessageSent
-        expect(eventMsgOne.from).not.toEqualAddress(jettonAddressZero)
-        expect(eventMsgOne.from).not.toEqualAddress(jettonAddressOne)
+        expect(eventMsgOne.from).toEqualAddress(poolAddress)
         expect(eventMsgOne.to).toEqualAddress(router.address)
       });      
+
+      it("should set fees", async () => {
+        const jettonAddressZero = randomAddress("a jetton")
+        const jettonAddressOne = randomAddress("another jetton")
+
+        const send = await blockchain.sendMessage(
+          internal({
+            from: adminAddress,
+            to: router.address,        
+            value: BigInt("300000000"),
+            body: router.setFees({
+              jetton0Address: jettonAddressZero,
+              jetton1Address: jettonAddressOne,
+              newLPFee: BigInt(2),
+              newProtocolFee: BigInt(1),
+              newRefFee: BigInt(1),
+              newProtocolFeeAddress: randomAddress("partner"),
+            }),
+          })
+        );
+
+        expect(send.transactions).toHaveTransaction({
+          from: adminAddress,
+          to: router.address,
+          success: true,
+      });
+      expect(send.events.length).toBe(2)
+      expect(send.events[0].type).toBe('message_sent')
+      expect(send.events[1].type).toBe('message_sent')
+
+      const eventMsgZero = send.events[0] as EventMessageSent
+      expect(eventMsgZero.from).toEqualAddress(router.address)
+      expect(eventMsgZero.to).not.toEqualAddress(jettonAddressZero)
+      expect(eventMsgZero.to).not.toEqualAddress(jettonAddressOne)
+      const poolAddress = eventMsgZero.to
+
+      const eventMsgOne = send.events[1] as EventMessageSent
+      expect(eventMsgOne.from).toEqualAddress(poolAddress)
+      expect(eventMsgOne.to).toEqualAddress(router.address)
+      });
+
 
 })
 
