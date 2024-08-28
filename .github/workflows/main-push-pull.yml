@@ -1,0 +1,30 @@
+name: Build and Test (NodeJs 18 with Yarn)
+
+on:
+  push:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  Unit-Tests:
+    runs-on: ubuntu-latest
+    name: Tests
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up node cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build application
+        run: yarn blueprint build
+
+      - name: Run tests
+        run: yarn blueprint test
