@@ -32,9 +32,11 @@ yarn blueprint run
 yarn blueprint create ContractName
 ```
 
-### Prettier formatting
+### TypeScript formatting
+Prettier formatter currently lacks a FunC plugin.
+To format the TypeScript files:
 ```bash
-yarn prettier:ts
+yarn format
 ```
 
 
