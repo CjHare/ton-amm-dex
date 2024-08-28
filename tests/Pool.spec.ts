@@ -2,10 +2,12 @@ import { Blockchain, EventAccountCreated, EventMessageSent, SandboxContract, Tre
 import { Address, Cell, TupleItemInt, TupleItemSlice, beginCell, toNano } from '@ton/core';
 import { Pool } from '../wrappers/Pool';
 import { compile } from '@ton/blueprint';
-import { getBlockchainPresetConfig, parseUri, randomAddress, zeroAddress } from './lib/helpers';
+import { randomAddress, zeroAddress } from './lib/address_generator';
+import { getBlockchainPresetConfig } from './lib/blockchain_config';
 
 /** Import the TON matchers */
 import "@ton/test-utils";
+import { parseUri } from './lib/hex_parser';
 
 describe('Pool', () => {
     let poolCode: Cell;

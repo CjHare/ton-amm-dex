@@ -1,8 +1,12 @@
-import { Blockchain, EventAccountCreated, EventMessageSent, SandboxContract, TreasuryContract, internal, printTransactionFees } from '@ton/sandbox';
+import { Blockchain, EventAccountCreated, EventMessageSent, SandboxContract, SmartContract, TreasuryContract, internal, printTransactionFees } from '@ton/sandbox';
 import { Address, Cell, TupleItemSlice, beginCell, toNano } from '@ton/core';
 import { compile } from '@ton/blueprint';
-import { getBlockchainPresetConfig, randomAddress } from './lib/helpers';
 import { Router } from '../wrappers/Router';
+import { currentTimeInSeconds } from './lib/date_time';
+import { randomAddress } from './lib/address_generator';
+import { getBlockchainPresetConfig } from './lib/blockchain_config';
+import { expectCodeEqualsCell } from './lib/account_state_equality';
+import { routerDataUpgradeCode } from './lib/router_getter';
 
 /** Import the TON matchers */
 import "@ton/test-utils";
@@ -396,14 +400,145 @@ describe('Router', () => {
 
         const eventMsgThree = provideLiquidityResult.events[3] as EventAccountCreated
         expect(eventMsgThree.account).toEqualAddress(lpWalletTwoAddress)
+      })
 
-      });
+      it("should allow pool upgrades", async () => {
+        // Blockchain.now begins undefined :. set it!
+        blockchain.now = currentTimeInSeconds()
+        const updateAdminAddress = randomAddress("new admin")
+
+        const sendUpdateAdminOk = await blockchain.sendMessage(
+            internal({
+                from: adminAddress,
+                to: router.address,
+                value:  BigInt("300000000"),
+                body: router.initAdminUpgrade({
+                    newAdmin: updateAdminAddress
+                    })
+                })
+        )
+
+        expect(sendUpdateAdminOk.transactions).toHaveTransaction({
+            from: adminAddress,
+            to: router.address,
+            success: true,
+        });
+
+        expect(sendUpdateAdminOk.transactions.length).toBe(1)
+
+        // two days pass (24 hours * 60 minutes * 60 seconds)
+          const twoDaysInSeconds = (24 * 60 * 60 * 2); 
+          blockchain.now += twoDaysInSeconds
+
+        const sendFinalizeUpgradeAdminOk = await blockchain.sendMessage(
+          internal({
+            from: adminAddress,
+            to: router.address,
+            value:  BigInt("300000000"),
+            body: router.finalizeUpgrades()
+            })
+        )
+        
+        expect(sendFinalizeUpgradeAdminOk.transactions).toHaveTransaction({
+            from: adminAddress,
+            to: router.address,
+            success: true,
+        });
+        expect(sendFinalizeUpgradeAdminOk.events.length).toBe(0)
+        
+        // Ensure the router code is the starting code version
+        await expectCodeEqualsCell(blockchain, router.address, routerCode)
+
+        // After the update, the admin has changed to updateAdminAddress (adminAddress is no longer admin)
+        const sendInitUpgradeWrongSender = await blockchain.sendMessage(
+            internal({
+                from: adminAddress,     
+                to: router.address,
+                value:  BigInt("300000000"),
+                body: router.initCodeUpgrade({
+                    newCode: beginCell().storeInt(BigInt("10"), 32).endCell(),
+                  }),
+                })
+        )
+
+        expect(sendInitUpgradeWrongSender.transactions).toHaveTransaction({
+            from: adminAddress,
+            to: router.address,
+            success: false,
+            exitCode: 65535
+        });
+
+        const codeUpgradeCell = beginCell().storeInt(BigInt("10"), 32).endCell()
+        const sendInitCodeUpgradeOk = await blockchain.sendMessage(
+            internal({
+                from: updateAdminAddress,     
+                to: router.address,
+                value:  BigInt("300000000"),
+                body: router.initCodeUpgrade({
+                    newCode: codeUpgradeCell
+                    })
+                })
+        )
+
+        expect(sendInitCodeUpgradeOk.transactions).toHaveTransaction({
+            from: updateAdminAddress,
+            to: router.address,
+            success: true
+        });
+        expect(sendFinalizeUpgradeAdminOk.events.length).toBe(0)
+        expect(await        routerDataUpgradeCode(blockchain, router)).toEqualCell(codeUpgradeCell)
+
+        // Failed upgrade results in a successul transaction
+        const wrongAdmin = randomAddress("new admin")
+        const sendFinalizeUpgradeFailed = await blockchain.sendMessage(
+          internal({
+              from: wrongAdmin,     
+              to: router.address,
+            value: BigInt("300000000"),
+            body: router.finalizeUpgrades(),
+              })
+      )
+
+      expect(sendFinalizeUpgradeFailed.transactions).toHaveTransaction({
+        from: updateAdminAddress,
+        to: router.address,
+        success: true
+    });
+    expect(sendFinalizeUpgradeFailed.events.length).toBe(0)
+    
+        // Seven days passed 
+        const sevenDaysInSeconds = (24 * 60 * 60 * 7); 
+        blockchain.now += sevenDaysInSeconds
+
+        const sendFinalizeUpgradeOk = await blockchain.sendMessage(
+          internal({
+              from: updateAdminAddress,     
+              to: router.address,
+            value: BigInt("300000000"),
+            body: router.finalizeUpgrades(),
+              })
+      )
+      expect(sendFinalizeUpgradeOk.transactions).toHaveTransaction({
+        from: updateAdminAddress,
+        to: router.address,
+        success: true
+    });
+    expect(sendFinalizeUpgradeOk.events.length).toBe(0)
+
+    await expectCodeEqualsCell(blockchain, router.address, codeUpgradeCell)
+      })
+
+      
 
 })
 
 
 
 
+//TODO move the compilables into compilables/
+
 //TODO rename Wallet -> LpWallet (keep consistent with Account)
 
 //TODO rename the Wrappers getters (TS inferrenace of get prefix being a member)
+
+//TODO finialize upgrade; is it enforcing the timelock correctly? FunC maybe not?

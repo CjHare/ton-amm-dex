@@ -1,32 +1,4 @@
-import Prando from "prando";
-import { Address, Cell, Contract } from '@ton/core';
-
-const CHUNK_DATA_PREFIX = 0x01;
-const OFFCHAIN_CONTENT_PREFIX = 0x01;
-
-export const zeroAddress = new Address(0, Buffer.alloc(32, 0));
-
-export function randomAddress(seed: string, workchain?: number) {
-  const random = new Prando(seed);
-  const hash = Buffer.alloc(32);
-  for (let i = 0; i < hash.length; i++) {
-    hash[i] = random.nextInt(0, 255);
-  }
-  return new Address(workchain ?? 0, hash);
-}
-
-export function parseUri(cell: Cell) : string{
-  const prefix = 8
-  const payloadLength = cell.bits.length - prefix
-  const parsing = cell.beginParse().skip(prefix)
-  
-  return hexToUtf8(parsing.loadBits(payloadLength).toString())
-    }
-  
-    function hexToUtf8(hexString: string): string {
-      // NodeJS Buffer library for the conversion
-      return Buffer.from(hexString, 'hex').toString('utf-8');
-  }
+import { Cell } from '@ton/core';
 
 export function getBlockchainPresetConfig(): Cell {
   // this is a hack to set the network; a dump of the real network config ...good enough for testing

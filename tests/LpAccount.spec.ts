@@ -1,8 +1,8 @@
 import { Blockchain, EventAccountCreated, EventMessageSent, SandboxContract, TreasuryContract, internal, printTransactionFees } from '@ton/sandbox';
 import { Address, Cell, toNano } from '@ton/core';
 import { compile } from '@ton/blueprint';
-import { randomAddress } from './lib/helpers';
 import { LpAccount } from '../wrappers/LpAccount';
+import { randomAddress } from './lib/address_generator';
 
 /** Import the TON matchers */
 import "@ton/test-utils";
