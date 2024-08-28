@@ -1,4 +1,4 @@
-import { Blockchain, EventAccountCreated, EventMessageSent, SandboxContract, SmartContract, TreasuryContract, internal, printTransactionFees } from '@ton/sandbox';
+import { Blockchain, EventAccountCreated, EventMessageSent, SandboxContract, TreasuryContract, internal } from '@ton/sandbox';
 import { Address, Cell, TupleItemSlice, beginCell, toNano } from '@ton/core';
 import { compile } from '@ton/blueprint';
 import { Router } from '../wrappers/Router';
@@ -6,7 +6,7 @@ import { currentTimeInSeconds } from './lib/date_time';
 import { randomAddress } from './lib/address_generator';
 import { getBlockchainPresetConfig } from './lib/blockchain_config';
 import { expectCodeEqualsCell } from './lib/account_state_equality';
-import { routerDataUpgradeCode } from './lib/router_getter';
+import { LockState, routerDataLockState, routerDataUpgradeCode } from './lib/router_getter';
 
 /** Import the TON matchers */
 import "@ton/test-utils";
@@ -609,9 +609,101 @@ describe('Router', () => {
       });
 
 
+
+      it("should lock/unlock trades", async () => {
+        const nonAdminAddress = randomAddress("")
+        const sendWrongSender = await blockchain.sendMessage(
+          internal({
+            from: nonAdminAddress,
+            to: router.address,        
+            value: BigInt("300000000"),
+            body: router.lock()
+          })
+        );
+
+        expect(sendWrongSender.transactions).toHaveTransaction({
+          from: nonAdminAddress,
+          to: router.address,
+          success: false
+      });
+
+      expect(await routerDataLockState(blockchain, router)).toBe(LockState.unlocked)
+      const send = await blockchain.sendMessage(
+        internal({
+          from: adminAddress,
+          to: router.address,        
+          value: BigInt("300000000"),
+          body: router.lock()
+        })
+      );
+
+      expect(send.transactions).toHaveTransaction({
+        from: adminAddress,
+        to: router.address,
+        success: true
+    });
+    expect(await routerDataLockState(blockchain, router)).toBe(LockState.locked)
+    
+    // Attempt a swap, expecting to be bounced
+    let tokenWallet0 = randomAddress("a random token wallet"),
+    tokenWallet1 = randomAddress("token wallet 2");
+
+    const sendWithoutRef = await blockchain.sendMessage(
+      internal({
+        from: tokenWallet0,
+        to: router.address,        
+        value: BigInt("300000000"),
+            body: router.swap({
+              jettonAmount: BigInt(100),
+              fromAddress: randomAddress("from"),
+              walletTokenBAddress: tokenWallet1,
+              toAddress: randomAddress("from"),
+              expectedOutput: BigInt(100)
+            })
+          })
+    )
+
+    expect(sendWithoutRef.transactions).toHaveTransaction({
+      from: tokenWallet0,
+      to: router.address,
+      success: true
+  });
+  expect(sendWithoutRef.events.length).toBe(2)
+  expect(sendWithoutRef.events[0].type).toBe('message_sent')
+  expect(sendWithoutRef.events[1].type).toBe('message_sent')
+
+  const eventMsgZero = sendWithoutRef.events[0] as EventMessageSent
+  expect(eventMsgZero.from).toEqualAddress(router.address)
+  expect(eventMsgZero.to).toEqualAddress(tokenWallet0)
+  expect(eventMsgZero.bounced).toBe(false)
+// skip everything expet last exit code
+  const eventMsgZeroBody = eventMsgZero.body.beginParse()
+  eventMsgZeroBody.skip(eventMsgZeroBody.remainingBits - 32)
+  expect(eventMsgZeroBody.loadUint(32)).toEqual(0xA0DBDCB);
+
+        
+
+  expect(await routerDataLockState(blockchain, router)).toBe(LockState.locked)
+  const send2 = await blockchain.sendMessage(
+    internal({
+      from: adminAddress,
+      to: router.address,        
+      value: BigInt("300000000"),
+      body: router.unlock()
+    })
+  );
+
+  expect(send2.transactions).toHaveTransaction({
+    from: adminAddress,
+    to: router.address,
+    success: true
+});
+expect(await routerDataLockState(blockchain, router)).toBe(LockState.unlocked)
+      });
+    
+    
+
 })
-
-
 
 
 //TODO move the compilables into compilables/
