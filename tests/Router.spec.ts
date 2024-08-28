@@ -701,7 +701,20 @@ describe('Router', () => {
 expect(await routerDataLockState(blockchain, router)).toBe(LockState.unlocked)
       });
     
+      it("should return contracts codes", async () => {
+        const callGetRouterData = await blockchain.runGetMethod(router.address, "get_router_data", [])
+        const routerPoolCode = (callGetRouterData.stack[3] as TupleItemSlice).cell;
+        const routerWalletCode = (callGetRouterData.stack[4] as TupleItemSlice).cell;
+        const routerAccountCode = (callGetRouterData.stack[5] as TupleItemSlice).cell;
     
+        expect(routerPoolCode).toEqualCell(poolCode)
+        expect(routerWalletCode).toEqualCell(walletCode)
+        expect(routerAccountCode).toEqualCell(accountCode)
+
+        expect(routerPoolCode.hash()).toEqual(poolCode.hash())
+        expect(routerWalletCode.hash()).toEqual(walletCode.hash())
+        expect(routerAccountCode.hash()).toEqual(accountCode.hash())
+      });    
 
 })
 
@@ -711,5 +724,3 @@ expect(await routerDataLockState(blockchain, router)).toBe(LockState.unlocked)
 //TODO rename Wallet -> LpWallet (keep consistent with Account)
 
 //TODO rename the Wrappers getters (TS inferrenace of get prefix being a member)
-
-//TODO finialize upgrade; is it enforcing the timelock correctly? FunC maybe not?
