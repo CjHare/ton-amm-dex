@@ -142,6 +142,7 @@ export class Router implements Contract {
             .storeAddress(params.toAddress)
             .storeBit(!!params.refAddress)
 
+        // eslint-disable-next-line no-extra-boolean-cast
         if (!!params.refAddress) swapPayload.storeAddress(params.refAddress || null)
 
         return beginMessage({ op: BigInt(0x7362d09c) })

@@ -7,11 +7,11 @@ import { Blockchain } from '@ton/sandbox'
  */
 export async function expectCodeEqualsCell(blockchain: Blockchain, contract: Address, expectedCode: Cell) {
     const state = (await blockchain.getContract(contract)).accountState
-    expect(state?.type).toBeDefined
+    expect(state?.type).toBeDefined()
     expect(state?.type).toBe('active')
     if (state?.type == 'active') {
         const code = (state as AccountStateActive).state.code
-        expect(code).toBeDefined
+        expect(code).toBeDefined()
         expect(code).toEqualCell(expectedCode)
     }
 }

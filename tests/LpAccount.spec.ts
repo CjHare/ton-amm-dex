@@ -5,7 +5,6 @@ import {
     SandboxContract,
     TreasuryContract,
     internal,
-    printTransactionFees,
 } from '@ton/sandbox'
 import { Address, Cell, toNano } from '@ton/core'
 import { compile } from '@ton/blueprint'
@@ -17,7 +16,6 @@ import '@ton/test-utils'
 
 describe('LP Account', () => {
     let accountCode: Cell
-    let routerAddress: Address
     let poolAddress: Address
     let userAddress: Address
 
@@ -33,8 +31,6 @@ describe('LP Account', () => {
 
     beforeEach(async () => {
         blockchain = await Blockchain.create()
-
-        routerAddress = randomAddress('a valid pool')
 
         account = blockchain.openContract(
             LpAccount.createFromConfig(

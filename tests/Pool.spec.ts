@@ -5,7 +5,6 @@ import {
     SandboxContract,
     TreasuryContract,
     internal,
-    printTransactionFees,
 } from '@ton/sandbox'
 import { Address, Cell, TupleItemInt, TupleItemSlice, beginCell, toNano } from '@ton/core'
 import { Pool } from '../wrappers/Pool'
@@ -91,9 +90,9 @@ describe('Pool', () => {
     }
 
     it('should deploy', async () => {
-        expect(blockchain).toBeDefined
-        expect(pool).toBeDefined
-        expect(pool.address).toBeDefined
+        expect(blockchain).toBeDefined()
+        expect(pool).toBeDefined()
+        expect(pool.address).toBeDefined()
     })
 
     it('should mint lp tokens', async () => {
@@ -152,12 +151,7 @@ describe('Pool', () => {
             to: pool.address,
             success: true,
         })
-
-        //TODO investigate behaviour, 4 events when same "user" used, only 2 for any other user, unknown why!
-        //TODO is this expected behiavour?
         expect(sendToken1.events).toHaveLength(4)
-        //        expect(sendToken1.events[0].type).toBe('message_sent')
-        //        expect(sendToken1.events[1].type).toBe('account_created')
     })
 
     it('should reset gas', async () => {
@@ -236,7 +230,7 @@ describe('Pool', () => {
         ])
         expect(callWalletAddress.exitCode).toBe(0)
         const userWalletAddress = (callWalletAddress.stack[0] as TupleItemSlice).cell?.beginParse().loadAddress()
-        expect(userWalletAddress).toBeDefined
+        expect(userWalletAddress).toBeDefined()
 
         // Internal message with incorrect parameter to burn tokens (expected to fail)
         const sendWrongAmount = await blockchain.sendMessage(
@@ -285,13 +279,13 @@ describe('Pool', () => {
 
         expect(burnTokensResult.events[0].type).toBe('message_sent')
         const initiationMsg = burnTokensResult.events[0] as EventMessageSent
-        expect(initiationMsg.from.equals(pool.address))
-        expect(initiationMsg.to.equals(userWalletAddress))
+        expect(initiationMsg.from).toEqualAddress(pool.address)
+        expect(initiationMsg.to).toEqualAddress(userWalletAddress)
 
         expect(burnTokensResult.events[1].type).toBe('message_sent')
         const burnMsg = burnTokensResult.events[1] as EventMessageSent
-        expect(burnMsg.from.equals(pool.address))
-        expect(burnMsg.to.equals(routerAddress))
+        expect(burnMsg.from).toEqualAddress(pool.address)
+        expect(burnMsg.to).toEqualAddress(routerAddress)
 
         // Check the balances after the burning
         const callPoolData = await blockchain.runGetMethod(pool.address, 'get_pool_data', [])
@@ -469,9 +463,6 @@ describe('Pool', () => {
         })
 
         expect(sendCollectFeesWithRewards.events.length).toBe(2)
-
-        //TODO check the balances for available fees
-        //TODO check "a valid protocol fee address" received the fees
     })
 
     it('should allow swapping', async () => {
@@ -587,8 +578,8 @@ describe('Pool', () => {
         expect(sendSwap.events.length).toBe(1)
         expect(sendSwap.events[0].type).toBe('message_sent')
         const sensSwaptMsg = sendSwap.events[0] as EventMessageSent
-        expect(sensSwaptMsg.from.equals(pool.address))
-        expect(sensSwaptMsg.to.equals(routerAddress))
+        expect(sensSwaptMsg.from).toEqualAddress(pool.address)
+        expect(sensSwaptMsg.to).toEqualAddress(routerAddress)
 
         let sendSwapRefs = sensSwaptMsg.body.refs[0].beginParse()
         sendSwapRefs.loadCoins()

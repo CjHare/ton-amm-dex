@@ -1,7 +1,6 @@
 {
     "name": "ton-amm-dex",
     "version": "0.0.1",
-    "type": "module",
     "scripts": {
         "start": "blueprint run",
         "build": "blueprint build",
