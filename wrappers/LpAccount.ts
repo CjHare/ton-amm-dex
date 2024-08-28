@@ -74,7 +74,7 @@ directAddLiquidity(params: {
         .endCell();
 }
 
- getLPAccountData(): Cell {
+ accountData(): Cell {
     return beginMessage({ op: BigInt(0xea97bbef) })
         .endCell();
 }

@@ -110,19 +110,19 @@ export class Pool implements Contract {
           .endCell();
       }
       
-    getPoolData(): Cell {
+    poolData(): Cell {
         return beginMessage({ op: BigInt(0x43c034e6) })
           .endCell();
       }
       
-    getExpectedOutputs(params: { jettonAmount: bigint, tokenSent: Address }): Cell {
+    expectedOutputs(params: { jettonAmount: bigint, tokenSent: Address }): Cell {
         return beginMessage({ op: BigInt(0xed4d8b67) })
           .storeCoins(params.jettonAmount)
           .storeAddress(params.tokenSent)
           .endCell();
       }
       
-    getCachedLPByAddress(params: { userAddress: Address }): Cell {
+    cachedLPByAddress(params: { userAddress: Address }): Cell {
         return beginMessage({ op: BigInt(0x0c0671db) })
           .storeAddress(params.userAddress)
           .endCell();

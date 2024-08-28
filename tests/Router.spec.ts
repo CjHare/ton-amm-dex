@@ -717,8 +717,3 @@ expect(await routerDataLockState(blockchain, router)).toBe(LockState.unlocked)
       });    
 
 })
-
-
-//TODO move the compilables into compilables/
-
-//TODO rename the Wrappers getters (TS inferrenace of get prefix being a member)
