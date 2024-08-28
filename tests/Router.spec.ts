@@ -21,7 +21,7 @@ describe('Router', () => {
     beforeAll(async () => {
         poolCode = await compile('Pool');
         routerCode = await compile('Router');
-        walletCode = await compile('Wallet');
+        walletCode = await compile('LpWallet');
         accountCode = await compile('LpAccount');
         adminAddress = randomAddress("admin")    
     });
@@ -720,7 +720,5 @@ expect(await routerDataLockState(blockchain, router)).toBe(LockState.unlocked)
 
 
 //TODO move the compilables into compilables/
-
-//TODO rename Wallet -> LpWallet (keep consistent with Account)
 
 //TODO rename the Wrappers getters (TS inferrenace of get prefix being a member)

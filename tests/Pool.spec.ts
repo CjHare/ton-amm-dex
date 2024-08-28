@@ -19,7 +19,7 @@ describe('Pool', () => {
 
     beforeAll(async () => {
         poolCode = await compile('Pool');
-        walletCode = await compile('Wallet');
+        walletCode = await compile('LpWallet');
         accountCode = await compile('LpAccount');
         walletZeroAddress = randomAddress("wallet0")
         walletOneAddress = randomAddress("wallet1")
