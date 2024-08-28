@@ -7,9 +7,42 @@ on:
       - main
 
 jobs:
-  Unit-Tests:
+  Lint:
+    runs-on: ubuntu-latest
+    name: Lint
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up node using a yarn cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+
+      - name: Restore yarn cache values
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            .yarn/cache
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build application
+        run: yarn blueprint build
+
+      - name: Lint the code
+        run: yarn lint  
+
+  Test:
     runs-on: ubuntu-latest
     name: Tests
+    needs: Lint
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -39,35 +72,4 @@ jobs:
       - name: Run tests
         run: yarn blueprint test
 
-  Lint:
-    runs-on: ubuntu-latest
-    name: Lint
-    needs: Unit-Tests
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      - name: Set up node using a yarn cache
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'yarn'
-
-      - name: Restore yarn cache values
-        uses: actions/cache@v4
-        with:
-          path: |
-            node_modules
-            .yarn/cache
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-
-
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
-
-      - name: Build application
-        run: yarn blueprint build
-
-      - name: Lint the code
-        run: yarn lint        
+      
