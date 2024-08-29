@@ -4,18 +4,18 @@ import { beginMessage } from './lib/helpers'
 export type RouterConfig = {
     isLocked: boolean
     adminAddress: Address
-    LPWalletCode: Cell
+    LpWalletCode: Cell
     poolCode: Cell
-    LPAccountCode: Cell
+    LpAccountCode: Cell
 }
 
 export function routerConfigToCell(config: RouterConfig): Cell {
     return beginCell()
         .storeUint(config.isLocked ? 1 : 0, 1)
         .storeAddress(config.adminAddress)
-        .storeRef(config.LPWalletCode)
+        .storeRef(config.LpWalletCode)
         .storeRef(config.poolCode)
-        .storeRef(config.LPAccountCode)
+        .storeRef(config.LpAccountCode)
         .storeRef(
             beginCell().storeUint(0, 64).storeUint(0, 64).storeAddress(null).storeRef(beginCell().endCell()).endCell(),
         )
