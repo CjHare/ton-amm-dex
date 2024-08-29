@@ -1,7 +1,7 @@
 #pragma version >=0.2.0;
 
-#include "imports/stdlib.fc";
-#include "common/extStdlib.fc";
+#include "common/stdlib.fc";
+#include "common/stdlib-ext.fc";
 #include "common/messages.fc";
 #include "lp_account/op.fc";
 #include "lp_account/params.fc";

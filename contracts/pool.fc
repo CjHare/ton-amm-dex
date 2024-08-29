@@ -1,7 +1,7 @@
 #pragma version >=0.2.0;
 
-#include "imports/stdlib.fc";
-#include "common/extStdlib.fc";
+#include "common/stdlib.fc";
+#include "common/stdlib-ext.fc";
 #include "common/gas.fc";
 #include "common/messages.fc";
 #include "pool/op.fc";
