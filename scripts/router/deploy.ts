@@ -1,14 +1,13 @@
 import { toNano } from '@ton/core'
 import { compile, NetworkProvider } from '@ton/blueprint'
-import dotenv from 'dotenv'
 import { Router } from '../../wrappers/Router'
-import { tonAddress } from '../../wrappers/lib/ton_address'
-
-/** Get dotEnv working */
-dotenv.config()
+import { promptAddress } from '../../scripts-lib/cli-prompt'
 
 export async function run(provider: NetworkProvider) {
-    const adminAddress = tonAddress(process.env.ADMIN_ADDRESS, 'ADMIN_ADDRESS')
+    const ui = provider.ui()
+
+    ui.write('\n------ Deploy TonSwap ------')
+    const adminAddress = await promptAddress('Router admin address', ui, provider.sender().address)
 
     const router = provider.open(
         Router.createFromConfig(

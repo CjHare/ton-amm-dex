@@ -1,7 +1,7 @@
 import { NetworkProvider } from '@ton/blueprint'
-import { tonAddress } from '../../wrappers/lib/ton_address'
 import { DEX } from '@ston-fi/sdk'
 import { Address, Cell } from '@ton/core'
+import { tonAddress } from '../../wrappers/lib/config-parsing'
 
 /** Get dotEnv working */
 import dotenv from 'dotenv'
@@ -14,7 +14,7 @@ export async function run(provider: NetworkProvider) {
 
     const data: GetRouterDataResponse = await router.getRouterData()
 
-    console.log(data)
+    provider.ui().write(`${data}`)
 }
 
 type GetRouterDataResponse = {
